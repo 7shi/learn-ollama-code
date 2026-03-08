@@ -37,6 +37,10 @@ Key insight: "Don't put everything in the system prompt. Load on demand."
 import os
 import re
 import subprocess
+try:
+    import gnureadline as readline
+except:
+    import readline
 from pathlib import Path
 
 from dotenv import load_dotenv

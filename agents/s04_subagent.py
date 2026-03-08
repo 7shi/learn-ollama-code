@@ -24,6 +24,10 @@ Key insight: "Process isolation gives context isolation for free."
 
 import os
 import subprocess
+try:
+    import gnureadline as readline
+except:
+    import readline
 from pathlib import Path
 
 from dotenv import load_dotenv

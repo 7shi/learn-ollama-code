@@ -28,6 +28,10 @@ Key insight: "The agent can track its own progress -- and I can see it."
 
 import os
 import subprocess
+try:
+    import gnureadline as readline
+except:
+    import readline
 from pathlib import Path
 
 from dotenv import load_dotenv

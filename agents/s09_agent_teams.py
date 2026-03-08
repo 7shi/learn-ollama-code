@@ -47,6 +47,10 @@ import os
 import subprocess
 import threading
 import time
+try:
+    import gnureadline as readline
+except:
+    import readline
 from pathlib import Path
 
 from dotenv import load_dotenv

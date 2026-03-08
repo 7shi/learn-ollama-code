@@ -24,6 +24,10 @@ Key insight: "State that survives compression -- because it's outside the conver
 import json
 import os
 import subprocess
+try:
+    import gnureadline as readline
+except:
+    import readline
 from pathlib import Path
 
 from dotenv import load_dotenv

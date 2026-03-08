@@ -25,6 +25,10 @@ policy, hooks, and lifecycle controls on top.
 
 import os
 import subprocess
+try:
+    import gnureadline as readline
+except:
+    import readline
 
 from dotenv import load_dotenv
 from ollama import Client

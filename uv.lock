@@ -58,6 +58,28 @@ wheels = [
 ]
 
 [[package]]
+name = "gnureadline"
+version = "8.3.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/34/33/d0a1a41e687f0d1956cc5a7b07735c6893f3fa061440fddb7a2c9d2bcd35/gnureadline-8.3.3.tar.gz", hash = "sha256:0972392bd2f31244e2d981178246fe8b729c8766454fdaeb275946ac47b7e9fd", size = 3595875, upload-time = "2026-01-06T15:03:17.802Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/26/6bd918fc51757e61d124b5d52e329055cf971fe896253d302eff1bee712b/gnureadline-8.3.3-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:8b798a83ebdb7d39731ac18011a212b6932899af64ad0d1ced3b8d5b4cb86d40", size = 692698, upload-time = "2026-01-06T15:03:57.383Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/cf/7cb17f30eface72b34df966ad65ebbf3005e854bec09610d554b1dde7804/gnureadline-8.3.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:049988a12b8ae0f158b9fdc4dfec6813fc00503e11e86e6f520a6e43f8acc40f", size = 698034, upload-time = "2026-01-06T15:03:59.24Z" },
+    { url = "https://files.pythonhosted.org/packages/22/e0/dc0903ea0a650401b03ef68445720a353300114cc3dcd2d06c36d28cc3b8/gnureadline-8.3.3-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:4e686dd0b971c7c798f486d3050581d85b4ca4a59c503b8c722f4d9362d1c935", size = 694636, upload-time = "2026-01-06T15:04:03.555Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/88/ec605a5589a1d3f9c928717e4f08a8743ed5e9d0010070e8b6b13f61c893/gnureadline-8.3.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:1f14c7c24ca819c6a90ba652bb0575f8d31c9ba8691f24b4fa249b175d9e531b", size = 700200, upload-time = "2026-01-06T15:04:04.874Z" },
+    { url = "https://files.pythonhosted.org/packages/2c/63/7bef930c11e0ddc02c1247e64f27dc3f37b42e0e65a92ca2e528f685ad67/gnureadline-8.3.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:ad431a93d1bdde49782530fd86e2856ac0518407a69bef9af7fb2dfc92003903", size = 694147, upload-time = "2026-01-06T15:04:08.828Z" },
+    { url = "https://files.pythonhosted.org/packages/c0/b0/67abcdc2499db32a14768ce2067d23ec44b44de0a4d605287b5204afafc5/gnureadline-8.3.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:3d4a0936de1365e193c8328e84b688a0bee1398b7d9413d5e67bcf92a10a525f", size = 700582, upload-time = "2026-01-06T15:04:10.095Z" },
+    { url = "https://files.pythonhosted.org/packages/71/e2/e87ec94780fee48e0b614c609b41d97945839e2c5260d4c2e823507e87f6/gnureadline-8.3.3-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:1267ba734d24ffbc8967191c5bc213f6dd8718284d917c69a3ee7d2541e60179", size = 698275, upload-time = "2026-01-06T15:04:13.881Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/09/9c9559ab69c5232a4f7f72614203331df68bf1bbfda446db0dc948f8d0d4/gnureadline-8.3.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a326ef2fb5e213518b96ef41b1f74c12f61d2ac8c2dca9ae6dbf88991b46244e", size = 705259, upload-time = "2026-01-06T15:04:15.216Z" },
+    { url = "https://files.pythonhosted.org/packages/4c/16/dee379d104a9b55e011b1e8d0f1bd15fcf6e96d57abcfbdf78c638f26aa1/gnureadline-8.3.3-cp313-cp313t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:11e4d8572eba509aca690e026928e1cd3df3f1b5ec39b551c6571cfd559f84e1", size = 712395, upload-time = "2026-01-06T15:04:19.72Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/fc/5d34adade939e65bc1a26d0485feb7167a52531237deb73c90cbc74348a8/gnureadline-8.3.3-cp313-cp313t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5b10e62f86f3738682ac5df2165fa711eba1f35193dc8a1af20d794434ca2816", size = 717655, upload-time = "2026-01-06T15:04:20.905Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/9f/1d8e8f83a8e36e011436311ef9c917fb8707d945fd1a18366cbc82f53937/gnureadline-8.3.3-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c1dabc49d09ab802dccb9f8057956cf9561b2ff9e5e4f7c2e2ad103356b2397d", size = 698298, upload-time = "2026-01-06T15:04:24.95Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/37/051029b1ae589dac216c6c2d7ce0c011a5cc868c64e8b3e0c9ffac79aa0f/gnureadline-8.3.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:320c9c47ecbfa2ea89f1821fa289b6f41f830654832a6069329dc3dda06f6784", size = 704708, upload-time = "2026-01-06T15:04:26.754Z" },
+    { url = "https://files.pythonhosted.org/packages/93/3e/52868275f90188a472b300af1668be1393b4fbe2bd04db14cebc45cabca0/gnureadline-8.3.3-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f7c23f4bf5c67d337a9e1a9c3e77e0eaadef76642c36e52f5fac31ef1eb5111e", size = 712520, upload-time = "2026-01-06T15:04:30.882Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/d3/55553947c4c71765b074c1870a236244cefdfab241689b11dd778b666936/gnureadline-8.3.3-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a27edaec97f038ba3eafa69fc79fa82bedf963319502fa065361ac1b1edffb3e", size = 717705, upload-time = "2026-01-06T15:04:32.662Z" },
+]
+
+[[package]]
 name = "h11"
 version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -104,17 +126,19 @@ wheels = [
 ]
 
 [[package]]
-name = "learn-claude-code"
+name = "learn-ollama-code"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "dotenv" },
+    { name = "gnureadline", marker = "sys_platform == 'linux'" },
     { name = "ollama" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "dotenv", specifier = ">=0.9.9" },
+    { name = "gnureadline", marker = "sys_platform == 'linux'", specifier = ">=8.0.0" },
     { name = "ollama", specifier = ">=0.6.1" },
 ]
 

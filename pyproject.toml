@@ -1,9 +1,10 @@
 [project]
-name = "learn-claude-code"
+name = "learn-ollama-code"
 version = "0.1.0"
-description = "Add your description here"
+description = "Bash is all you need - A nano Claude Code–like agent for Ollama, built from 0 to 1"
 readme = "README.md"
-requires-python = ">=3.13"
+repository = "https://github.com/7shi/learn-ollama-code"
+requires-python = ">=3.10"
 dependencies = [
     "dotenv>=0.9.9",
     "ollama>=0.6.1",

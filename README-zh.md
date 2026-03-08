@@ -1,11 +1,11 @@
-# Learn Claude Code -- 从 0 到 1 构建 nano Claude Code-like agent
-
 [English](./README.md) | [中文](./README-zh.md) | [日本語](./README-ja.md)
+
+# Learn Claude Code for Ollama -- 从 0 到 1 构建 nano Claude Code-like agent
 
 > **注意:** 本仓库是 [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code) 的独立 fork，不打算合并回上游。
 > 原仓库使用 Anthropic Python 库，面向兼容 API 的使用场景。
 > 本 fork 将其替换为 [Ollama Python 库](https://github.com/ollama/ollama-python)，
-> 通过 [Ollama](https://ollama.com) 实现本地模型的运行。
+> 专注于通过 [Ollama](https://ollama.com) 实现本地模型的运行。
 
 ```
                     THE AGENT PATTERN

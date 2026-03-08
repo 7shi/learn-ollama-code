@@ -1,16 +1,11 @@
 [English](./README.md) | [中文](./README-zh.md) | [日本語](./README-ja.md)
 
+# Learn Claude Code for Ollama -- A nano Claude Code-like agent, built from 0 to 1
+
 > **Note:** This is an independent fork of [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code) and is not intended to be merged back.
-> The original uses the Anthropic Python library and was designed for use with compatible APIs.
+> The original uses the Anthropic Python library and is designed for use with compatible APIs.
 > This fork replaces it with the [Ollama Python library](https://github.com/ollama/ollama-python),
-> enabling local model execution via [Ollama](https://ollama.com).
-
-# Learn Claude Code -- A nano Claude Code-like agent, built from 0 to 1
-<img width="260" src="https://github.com/user-attachments/assets/fe8b852b-97da-4061-a467-9694906b5edf" /><br>
-
-Scan with Wechat to fellow us,  
-or fellow on X: [shareAI-Lab](https://x.com/baicai003)  
-
+> specializing in local model execution via [Ollama](https://ollama.com).
 
 ```
                     THE AGENT PATTERN

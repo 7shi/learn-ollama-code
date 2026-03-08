@@ -108,8 +108,8 @@ def remove(self, name, force=False, complete_task=False):
 ## 试一试
 
 ```sh
-cd learn-claude-code
-python agents/s12_worktree_task_isolation.py
+cd learn-ollama-code
+uv run agents/s12_worktree_task_isolation.py
 ```
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):

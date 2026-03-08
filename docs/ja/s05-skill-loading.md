@@ -96,8 +96,8 @@ TOOL_HANDLERS = {
 ## 試してみる
 
 ```sh
-cd learn-claude-code
-python agents/s05_skill_loading.py
+cd learn-ollama-code
+uv run agents/s05_skill_loading.py
 ```
 
 1. `What skills are available?`

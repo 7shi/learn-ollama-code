@@ -108,8 +108,8 @@ def remove(self, name, force=False, complete_task=False):
 ## 試してみる
 
 ```sh
-cd learn-claude-code
-python agents/s12_worktree_task_isolation.py
+cd learn-ollama-code
+uv run agents/s12_worktree_task_isolation.py
 ```
 
 1. `Create tasks for backend auth and frontend login page, then list tasks.`

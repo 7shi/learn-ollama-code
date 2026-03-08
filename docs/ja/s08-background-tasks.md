@@ -73,15 +73,17 @@ def _execute(self, task_id, command):
 def agent_loop(messages: list):
     while True:
         notifs = BG.drain_notifications()
-        if notifs:
+        if notifs and messages:
             notif_text = "\n".join(
-                f"[bg:{n['task_id']}] {n['result']}" for n in notifs)
+                f"[bg:{n['task_id']}] {n['status']}: {n['result']}" for n in notifs)
             messages.append({"role": "user",
                 "content": f"<background-results>\n{notif_text}\n"
                            f"</background-results>"})
             messages.append({"role": "assistant",
                 "content": "Noted background results."})
-        response = client.messages.create(...)
+        response = client.chat(
+            model=MODEL, messages=messages, tools=TOOLS, think=THINK,
+        )
 ```
 
 ループはシングルスレッドのまま。サブプロセスI/Oだけが並列化される。
@@ -98,8 +100,8 @@ def agent_loop(messages: list):
 ## 試してみる
 
 ```sh
-cd learn-claude-code
-python agents/s08_background_tasks.py
+cd learn-ollama-code
+uv run agents/s08_background_tasks.py
 ```
 
 1. `Run "sleep 5 && echo done" in the background, then create a file while it runs`

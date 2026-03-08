@@ -18,7 +18,7 @@
                     ^                |
                     |   tool_result  |
                     +----------------+
-                    (loop until stop_reason != "tool_use")
+                    (loop until tool_calls is None)
 ```
 
 一个退出条件控制整个流程。循环持续运行, 直到模型不再调用工具。
@@ -34,60 +34,51 @@ messages.append({"role": "user", "content": query})
 2. 将消息和工具定义一起发给 LLM。
 
 ```python
-response = client.messages.create(
-    model=MODEL, system=SYSTEM, messages=messages,
-    tools=TOOLS, max_tokens=8000,
+response = client.chat(
+    model=MODEL, messages=messages, tools=TOOLS, think=THINK,
 )
 ```
 
-3. 追加助手响应。检查 `stop_reason` -- 如果模型没有调用工具, 结束。
+3. 追加助手响应。检查 `tool_calls` -- 如果模型没有调用工具, 结束。
 
 ```python
-messages.append({"role": "assistant", "content": response.content})
-if response.stop_reason != "tool_use":
+messages.append(response.message)
+if not response.message.tool_calls:
     return
 ```
 
-4. 执行每个工具调用, 收集结果, 作为 user 消息追加。回到第 2 步。
+4. 执行每个工具调用, 将结果作为 tool 消息追加。回到第 2 步。
 
 ```python
-results = []
-for block in response.content:
-    if block.type == "tool_use":
-        output = run_bash(block.input["command"])
-        results.append({
-            "type": "tool_result",
-            "tool_use_id": block.id,
-            "content": output,
-        })
-messages.append({"role": "user", "content": results})
+for tool in response.message.tool_calls:
+    output = run_bash(tool.function.arguments["command"])
+    messages.append({
+        "role": "tool",
+        "content": output,
+        "tool_name": tool.function.name,
+    })
 ```
 
 组装为一个完整函数:
 
 ```python
-def agent_loop(query):
-    messages = [{"role": "user", "content": query}]
+def agent_loop(messages):
     while True:
-        response = client.messages.create(
-            model=MODEL, system=SYSTEM, messages=messages,
-            tools=TOOLS, max_tokens=8000,
+        response = client.chat(
+            model=MODEL, messages=messages, tools=TOOLS, think=THINK,
         )
-        messages.append({"role": "assistant", "content": response.content})
+        messages.append(response.message)
 
-        if response.stop_reason != "tool_use":
+        if not response.message.tool_calls:
             return
 
-        results = []
-        for block in response.content:
-            if block.type == "tool_use":
-                output = run_bash(block.input["command"])
-                results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": output,
-                })
-        messages.append({"role": "user", "content": results})
+        for tool in response.message.tool_calls:
+            output = run_bash(tool.function.arguments["command"])
+            messages.append({
+                "role": "tool",
+                "content": output,
+                "tool_name": tool.function.name,
+            })
 ```
 
 不到 30 行, 这就是整个智能体。后面 11 个章节都在这个循环上叠加机制 -- 循环本身始终不变。
@@ -99,13 +90,13 @@ def agent_loop(query):
 | Agent loop    | (无)       | `while True` + stop_reason     |
 | Tools         | (无)       | `bash` (单一工具)              |
 | Messages      | (无)       | 累积式消息列表                 |
-| Control flow  | (无)       | `stop_reason != "tool_use"`    |
+| Control flow  | (无)       | `not tool_calls`               |
 
 ## 试一试
 
 ```sh
-cd learn-claude-code
-python agents/s01_agent_loop.py
+cd learn-ollama-code
+uv run agents/s01_agent_loop.py
 ```
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):

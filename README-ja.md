@@ -2,6 +2,11 @@
 
 [English](./README.md) | [中文](./README-zh.md) | [日本語](./README-ja.md)
 
+> **注意:** これは [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code) の独立フォークであり、本家へのマージは想定していません。
+> 本家は Anthropic Python ライブラリを使用し、互換 API での利用を想定していました。
+> このフォークでは [Ollama Python ライブラリ](https://github.com/ollama/ollama-python) に置き換え、
+> [Ollama](https://ollama.com) によるローカルモデルの実行を可能にしています。
+
 ```
                     THE AGENT PATTERN
                     =================
@@ -55,26 +60,26 @@
 ```python
 def agent_loop(messages):
     while True:
-        response = client.messages.create(
-            model=MODEL, system=SYSTEM,
-            messages=messages, tools=TOOLS,
+        response = client.chat(
+            model=MODEL,
+            messages=messages,
+            tools=TOOLS,
+            think=THINK,
         )
-        messages.append({"role": "assistant",
-                         "content": response.content})
+        messages.append(response.message)
 
-        if response.stop_reason != "tool_use":
+        if not response.message.tool_calls:
             return
 
-        results = []
-        for block in response.content:
-            if block.type == "tool_use":
-                output = TOOL_HANDLERS[block.name](**block.input)
-                results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": output,
-                })
-        messages.append({"role": "user", "content": results})
+        for tool in response.message.tool_calls:
+            output = TOOL_HANDLERS[tool.function.name](
+                **tool.function.arguments
+            )
+            messages.append({
+                "role": "tool",
+                "content": output,
+                "tool_name": tool.function.name,
+            })
 ```
 
 各セッションはこのループの上に1つのメカニズムを重ねる -- ループ自体は変わらない。
@@ -95,14 +100,14 @@ def agent_loop(messages):
 ## クイックスタート
 
 ```sh
-git clone https://github.com/shareAI-lab/learn-claude-code
-cd learn-claude-code
-pip install -r requirements.txt
-cp .env.example .env   # .env を編集して ANTHROPIC_API_KEY を入力
+git clone https://github.com/7shi/learn-ollama-code
+cd learn-ollama-code
+uv sync
+cp .env.example .env   # .env を編集して MODEL_ID を入力 (Ollama モデル名)
 
-python agents/s01_agent_loop.py       # ここから開始
-python agents/s12_worktree_task_isolation.py  # 全セッションの到達点
-python agents/s_full.py               # 総括: 全メカニズム統合
+uv run agents/s01_agent_loop.py       # ここから開始
+uv run agents/s12_worktree_task_isolation.py  # 全セッションの到達点
+uv run agents/s_full.py               # 総括: 全メカニズム統合
 ```
 
 ### Web プラットフォーム

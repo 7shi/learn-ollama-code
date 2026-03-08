@@ -18,7 +18,7 @@
                     ^                |
                     |   tool_result  |
                     +----------------+
-                    (loop until stop_reason != "tool_use")
+                    (loop until tool_calls is None)
 ```
 
 1つの終了条件がフロー全体を制御する。モデルがツール呼び出しを止めるまでループが回り続ける。
@@ -34,60 +34,51 @@ messages.append({"role": "user", "content": query})
 2. メッセージとツール定義をLLMに送信する。
 
 ```python
-response = client.messages.create(
-    model=MODEL, system=SYSTEM, messages=messages,
-    tools=TOOLS, max_tokens=8000,
+response = client.chat(
+    model=MODEL, messages=messages, tools=TOOLS, think=THINK,
 )
 ```
 
-3. アシスタントのレスポンスを追加し、`stop_reason`を確認する。ツールが呼ばれなければ終了。
+3. アシスタントのレスポンスを追加し、`tool_calls`を確認する。ツールが呼ばれなければ終了。
 
 ```python
-messages.append({"role": "assistant", "content": response.content})
-if response.stop_reason != "tool_use":
+messages.append(response.message)
+if not response.message.tool_calls:
     return
 ```
 
-4. 各ツール呼び出しを実行し、結果を収集してuserメッセージとして追加。ステップ2に戻る。
+4. 各ツール呼び出しを実行し、結果をtoolメッセージとして追加。ステップ2に戻る。
 
 ```python
-results = []
-for block in response.content:
-    if block.type == "tool_use":
-        output = run_bash(block.input["command"])
-        results.append({
-            "type": "tool_result",
-            "tool_use_id": block.id,
-            "content": output,
-        })
-messages.append({"role": "user", "content": results})
+for tool in response.message.tool_calls:
+    output = run_bash(tool.function.arguments["command"])
+    messages.append({
+        "role": "tool",
+        "content": output,
+        "tool_name": tool.function.name,
+    })
 ```
 
 1つの関数にまとめると:
 
 ```python
-def agent_loop(query):
-    messages = [{"role": "user", "content": query}]
+def agent_loop(messages):
     while True:
-        response = client.messages.create(
-            model=MODEL, system=SYSTEM, messages=messages,
-            tools=TOOLS, max_tokens=8000,
+        response = client.chat(
+            model=MODEL, messages=messages, tools=TOOLS, think=THINK,
         )
-        messages.append({"role": "assistant", "content": response.content})
+        messages.append(response.message)
 
-        if response.stop_reason != "tool_use":
+        if not response.message.tool_calls:
             return
 
-        results = []
-        for block in response.content:
-            if block.type == "tool_use":
-                output = run_bash(block.input["command"])
-                results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": output,
-                })
-        messages.append({"role": "user", "content": results})
+        for tool in response.message.tool_calls:
+            output = run_bash(tool.function.arguments["command"])
+            messages.append({
+                "role": "tool",
+                "content": output,
+                "tool_name": tool.function.name,
+            })
 ```
 
 これでエージェント全体が30行未満に収まる。本コースの残りはすべてこのループの上に積み重なる -- ループ自体は変わらない。
@@ -99,13 +90,13 @@ def agent_loop(query):
 | Agent loop    | (none)     | `while True` + stop_reason     |
 | Tools         | (none)     | `bash` (one tool)              |
 | Messages      | (none)     | Accumulating list              |
-| Control flow  | (none)     | `stop_reason != "tool_use"`    |
+| Control flow  | (none)     | `not tool_calls`               |
 
 ## 試してみる
 
 ```sh
-cd learn-claude-code
-python agents/s01_agent_loop.py
+cd learn-ollama-code
+uv run agents/s01_agent_loop.py
 ```
 
 1. `Create a file called hello.py that prints "Hello, World!"`

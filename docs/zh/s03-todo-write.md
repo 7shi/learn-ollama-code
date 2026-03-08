@@ -62,13 +62,11 @@ TOOL_HANDLERS = {
 3. nag reminder: 模型连续 3 轮以上不调用 `todo` 时注入提醒。
 
 ```python
-if rounds_since_todo >= 3 and messages:
-    last = messages[-1]
-    if last["role"] == "user" and isinstance(last.get("content"), list):
-        last["content"].insert(0, {
-            "type": "text",
-            "text": "<reminder>Update your todos.</reminder>",
-        })
+if rounds_since_todo >= 3:
+    messages.append({
+        "role": "user",
+        "content": "<reminder>Update your todos.</reminder>",
+    })
 ```
 
 "同时只能有一个 in_progress" 强制顺序聚焦。nag reminder 制造问责压力 -- 你不更新计划, 系统就追着你问。
@@ -85,8 +83,8 @@ if rounds_since_todo >= 3 and messages:
 ## 试一试
 
 ```sh
-cd learn-claude-code
-python agents/s03_todo_write.py
+cd learn-ollama-code
+uv run agents/s03_todo_write.py
 ```
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):

@@ -61,16 +61,15 @@ TOOL_HANDLERS = {
 3. 循环中按名称查找处理函数。循环体本身与 s01 完全一致。
 
 ```python
-for block in response.content:
-    if block.type == "tool_use":
-        handler = TOOL_HANDLERS.get(block.name)
-        output = handler(**block.input) if handler \
-            else f"Unknown tool: {block.name}"
-        results.append({
-            "type": "tool_result",
-            "tool_use_id": block.id,
-            "content": output,
-        })
+for tool in response.message.tool_calls:
+    handler = TOOL_HANDLERS.get(tool.function.name)
+    output = handler(**tool.function.arguments) if handler \
+        else f"Unknown tool: {tool.function.name}"
+    messages.append({
+        "role": "tool",
+        "content": str(output),
+        "tool_name": tool.function.name,
+    })
 ```
 
 加工具 = 加 handler + 加 schema。循环永远不变。
@@ -87,8 +86,8 @@ for block in response.content:
 ## 试一试
 
 ```sh
-cd learn-claude-code
-python agents/s02_tool_use.py
+cd learn-ollama-code
+uv run agents/s02_tool_use.py
 ```
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):

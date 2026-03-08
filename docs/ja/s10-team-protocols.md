@@ -93,8 +93,8 @@ def handle_plan_review(request_id, approve, feedback=""):
 ## 試してみる
 
 ```sh
-cd learn-claude-code
-python agents/s10_team_protocols.py
+cd learn-ollama-code
+uv run agents/s10_team_protocols.py
 ```
 
 1. `Spawn alice as a coder. Then request her shutdown.`

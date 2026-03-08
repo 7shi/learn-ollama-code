@@ -62,13 +62,11 @@ TOOL_HANDLERS = {
 3. nagリマインダーが、モデルが3ラウンド以上`todo`を呼ばなかった場合にナッジを注入する。
 
 ```python
-if rounds_since_todo >= 3 and messages:
-    last = messages[-1]
-    if last["role"] == "user" and isinstance(last.get("content"), list):
-        last["content"].insert(0, {
-            "type": "text",
-            "text": "<reminder>Update your todos.</reminder>",
-        })
+if rounds_since_todo >= 3:
+    messages.append({
+        "role": "user",
+        "content": "<reminder>Update your todos.</reminder>",
+    })
 ```
 
 「一度にin_progressは1つだけ」の制約が逐次的な集中を強制し、nagリマインダーが説明責任を生む。
@@ -85,8 +83,8 @@ if rounds_since_todo >= 3 and messages:
 ## 試してみる
 
 ```sh
-cd learn-claude-code
-python agents/s03_todo_write.py
+cd learn-ollama-code
+uv run agents/s03_todo_write.py
 ```
 
 1. `Refactor the file hello.py: add type hints, docstrings, and a main guard`

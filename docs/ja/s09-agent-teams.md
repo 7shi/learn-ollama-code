@@ -88,15 +88,17 @@ def _teammate_loop(self, name, role, prompt):
     messages = [{"role": "user", "content": prompt}]
     for _ in range(50):
         inbox = BUS.read_inbox(name)
-        if inbox != "[]":
-            messages.append({"role": "user",
-                "content": f"<inbox>{inbox}</inbox>"})
-            messages.append({"role": "assistant",
-                "content": "Noted inbox messages."})
-        response = client.messages.create(...)
-        if response.stop_reason != "tool_use":
+        for msg in inbox:
+            messages.append({"role": "user", "content": json.dumps(msg)})
+        response = client.chat(
+            model=MODEL, messages=messages, tools=tools, think=THINK,
+        )
+        messages.append(response.message)
+        if not response.message.tool_calls:
             break
-        # execute tools, append results...
+        for tool in response.message.tool_calls:
+            output = self._exec(name, tool.function.name, tool.function.arguments)
+            messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
     self._find_member(name)["status"] = "idle"
 ```
 
@@ -114,8 +116,8 @@ def _teammate_loop(self, name, role, prompt):
 ## 試してみる
 
 ```sh
-cd learn-claude-code
-python agents/s09_agent_teams.py
+cd learn-ollama-code
+uv run agents/s09_agent_teams.py
 ```
 
 1. `Spawn alice (coder) and bob (tester). Have alice send bob a message.`

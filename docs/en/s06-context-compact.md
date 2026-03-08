@@ -46,17 +46,16 @@ continue    [Layer 2: auto_compact]
 
 ```python
 def micro_compact(messages: list) -> list:
-    tool_results = []
-    for i, msg in enumerate(messages):
-        if msg["role"] == "user" and isinstance(msg.get("content"), list):
-            for j, part in enumerate(msg["content"]):
-                if isinstance(part, dict) and part.get("type") == "tool_result":
-                    tool_results.append((i, j, part))
-    if len(tool_results) <= KEEP_RECENT:
+    # Collect indices of all tool result messages
+    tool_indices = [i for i, m in enumerate(messages)
+                    if isinstance(m, dict) and m.get("role") == "tool"]
+    if len(tool_indices) <= KEEP_RECENT:
         return messages
-    for _, _, part in tool_results[:-KEEP_RECENT]:
-        if len(part.get("content", "")) > 100:
-            part["content"] = f"[Previous: used {tool_name}]"
+    # Clear old results (keep last KEEP_RECENT)
+    for i in tool_indices[:-KEEP_RECENT]:
+        msg = messages[i]
+        if isinstance(msg.get("content"), str) and len(msg["content"]) > 100:
+            msg["content"] = f"[Previous: used {msg.get('tool_name', 'unknown')}]"
     return messages
 ```
 
@@ -68,18 +67,19 @@ def auto_compact(messages: list) -> list:
     transcript_path = TRANSCRIPT_DIR / f"transcript_{int(time.time())}.jsonl"
     with open(transcript_path, "w") as f:
         for msg in messages:
-            f.write(json.dumps(msg, default=str) + "\n")
+            f.write(json.dumps(msg, default=str, ensure_ascii=False) + "\n")
     # LLM summarizes
-    response = client.messages.create(
+    response = client.chat(
         model=MODEL,
         messages=[{"role": "user", "content":
             "Summarize this conversation for continuity..."
-            + json.dumps(messages, default=str)[:80000]}],
-        max_tokens=2000,
+            + json.dumps(messages, default=str, ensure_ascii=False)[:80000]}],
+        think=THINK,
     )
+    summary = response.message.content
     return [
-        {"role": "user", "content": f"[Compressed]\n\n{response.content[0].text}"},
-        {"role": "assistant", "content": "Understood. Continuing."},
+        {"role": "user", "content": f"[Conversation compressed. Transcript: {transcript_path}]\n\n{summary}"},
+        {"role": "assistant", "content": "Understood. I have the context from the summary. Continuing."},
     ]
 ```
 
@@ -93,7 +93,9 @@ def agent_loop(messages: list):
         micro_compact(messages)                        # Layer 1
         if estimate_tokens(messages) > THRESHOLD:
             messages[:] = auto_compact(messages)       # Layer 2
-        response = client.messages.create(...)
+        response = client.chat(
+            model=MODEL, messages=messages, tools=TOOLS, think=THINK,
+        )
         # ... tool execution ...
         if manual_compact:
             messages[:] = auto_compact(messages)       # Layer 3
@@ -114,8 +116,8 @@ Transcripts preserve full history on disk. Nothing is truly lost -- just moved o
 ## Try It
 
 ```sh
-cd learn-claude-code
-python agents/s06_context_compact.py
+cd learn-ollama-code
+uv run agents/s06_context_compact.py
 ```
 
 1. `Read every Python file in the agents/ directory one by one` (watch micro-compact replace old results)

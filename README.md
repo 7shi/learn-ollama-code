@@ -1,4 +1,10 @@
-[English](./README.md) | [中文](./README-zh.md) | [日本語](./README-ja.md)  
+[English](./README.md) | [中文](./README-zh.md) | [日本語](./README-ja.md)
+
+> **Note:** This is an independent fork of [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code) and is not intended to be merged back.
+> The original uses the Anthropic Python library and was designed for use with compatible APIs.
+> This fork replaces it with the [Ollama Python library](https://github.com/ollama/ollama-python),
+> enabling local model execution via [Ollama](https://ollama.com).
+
 # Learn Claude Code -- A nano Claude Code-like agent, built from 0 to 1
 <img width="260" src="https://github.com/user-attachments/assets/fe8b852b-97da-4061-a467-9694906b5edf" /><br>
 
@@ -59,26 +65,26 @@ or fellow on X: [shareAI-Lab](https://x.com/baicai003)
 ```python
 def agent_loop(messages):
     while True:
-        response = client.messages.create(
-            model=MODEL, system=SYSTEM,
-            messages=messages, tools=TOOLS,
+        response = client.chat(
+            model=MODEL,
+            messages=messages,
+            tools=TOOLS,
+            think=THINK,
         )
-        messages.append({"role": "assistant",
-                         "content": response.content})
+        messages.append(response.message)
 
-        if response.stop_reason != "tool_use":
+        if not response.message.tool_calls:
             return
 
-        results = []
-        for block in response.content:
-            if block.type == "tool_use":
-                output = TOOL_HANDLERS[block.name](**block.input)
-                results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": output,
-                })
-        messages.append({"role": "user", "content": results})
+        for tool in response.message.tool_calls:
+            output = TOOL_HANDLERS[tool.function.name](
+                **tool.function.arguments
+            )
+            messages.append({
+                "role": "tool",
+                "content": output,
+                "tool_name": tool.function.name,
+            })
 ```
 
 Every session layers one mechanism on top of this loop -- without changing the loop itself.
@@ -99,14 +105,14 @@ Treat the team JSONL mailbox protocol in this repo as a teaching implementation,
 ## Quick Start
 
 ```sh
-git clone https://github.com/shareAI-lab/learn-claude-code
-cd learn-claude-code
-pip install -r requirements.txt
-cp .env.example .env   # Edit .env with your ANTHROPIC_API_KEY
+git clone https://github.com/7shi/learn-ollama-code
+cd learn-ollama-code
+uv sync
+cp .env.example .env   # Edit .env with your MODEL_ID (Ollama model name)
 
-python agents/s01_agent_loop.py       # Start here
-python agents/s12_worktree_task_isolation.py  # Full progression endpoint
-python agents/s_full.py               # Capstone: all mechanisms combined
+uv run agents/s01_agent_loop.py       # Start here
+uv run agents/s12_worktree_task_isolation.py  # Full progression endpoint
+uv run agents/s_full.py               # Capstone: all mechanisms combined
 ```
 
 ### Web Platform

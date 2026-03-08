@@ -2,6 +2,11 @@
 
 [English](./README.md) | [中文](./README-zh.md) | [日本語](./README-ja.md)
 
+> **注意:** 本仓库是 [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code) 的独立 fork，不打算合并回上游。
+> 原仓库使用 Anthropic Python 库，面向兼容 API 的使用场景。
+> 本 fork 将其替换为 [Ollama Python 库](https://github.com/ollama/ollama-python)，
+> 通过 [Ollama](https://ollama.com) 实现本地模型的运行。
+
 ```
                     THE AGENT PATTERN
                     =================
@@ -55,26 +60,26 @@
 ```python
 def agent_loop(messages):
     while True:
-        response = client.messages.create(
-            model=MODEL, system=SYSTEM,
-            messages=messages, tools=TOOLS,
+        response = client.chat(
+            model=MODEL,
+            messages=messages,
+            tools=TOOLS,
+            think=THINK,
         )
-        messages.append({"role": "assistant",
-                         "content": response.content})
+        messages.append(response.message)
 
-        if response.stop_reason != "tool_use":
+        if not response.message.tool_calls:
             return
 
-        results = []
-        for block in response.content:
-            if block.type == "tool_use":
-                output = TOOL_HANDLERS[block.name](**block.input)
-                results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": output,
-                })
-        messages.append({"role": "user", "content": results})
+        for tool in response.message.tool_calls:
+            output = TOOL_HANDLERS[tool.function.name](
+                **tool.function.arguments
+            )
+            messages.append({
+                "role": "tool",
+                "content": output,
+                "tool_name": tool.function.name,
+            })
 ```
 
 每个课程在这个循环之上叠加一个机制 -- 循环本身始终不变。
@@ -95,14 +100,14 @@ def agent_loop(messages):
 ## 快速开始
 
 ```sh
-git clone https://github.com/shareAI-lab/learn-claude-code
-cd learn-claude-code
-pip install -r requirements.txt
-cp .env.example .env   # 编辑 .env 填入你的 ANTHROPIC_API_KEY
+git clone https://github.com/7shi/learn-ollama-code
+cd learn-ollama-code
+uv sync
+cp .env.example .env   # 编辑 .env 填入你的 MODEL_ID（Ollama 模型名）
 
-python agents/s01_agent_loop.py       # 从这里开始
-python agents/s12_worktree_task_isolation.py  # 完整递进终点
-python agents/s_full.py               # 总纲: 全部机制合一
+uv run agents/s01_agent_loop.py       # 从这里开始
+uv run agents/s12_worktree_task_isolation.py  # 完整递进终点
+uv run agents/s_full.py               # 总纲: 全部机制合一
 ```
 
 ### Web 平台

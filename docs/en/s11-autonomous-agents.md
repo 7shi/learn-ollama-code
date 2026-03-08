@@ -22,11 +22,11 @@ Teammate lifecycle with idle cycle:
 +---+---+
     |
     v
-+-------+   tool_use     +-------+
++-------+   tool_calls   +-------+
 | WORK  | <------------- |  LLM  |
 +---+---+                +-------+
     |
-    | stop_reason != tool_use (or idle tool called)
+    | not response.message.tool_calls (or idle tool called)
     v
 +--------+
 |  IDLE  |  poll every 5s for up to 60s
@@ -51,18 +51,25 @@ Identity re-injection after compression:
 def _loop(self, name, role, prompt):
     while True:
         # -- WORK PHASE --
-        messages = [{"role": "user", "content": prompt}]
         for _ in range(50):
-            response = client.messages.create(...)
-            if response.stop_reason != "tool_use":
+            response = client.chat(
+                model=MODEL, messages=messages, tools=tools, think=THINK,
+            )
+            messages.append(response.message)
+            if not response.message.tool_calls:
                 break
-            # execute tools...
+            for tool in response.message.tool_calls:
+                if tool.function.name == "idle":
+                    idle_requested = True
+                else:
+                    output = self._exec(name, tool.function.name, tool.function.arguments)
+                messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
             if idle_requested:
                 break
 
         # -- IDLE PHASE --
         self._set_status(name, "idle")
-        resume = self._idle_poll(name, messages)
+        # poll inbox and task board...
         if not resume:
             self._set_status(name, "shutdown")
             return
@@ -72,22 +79,25 @@ def _loop(self, name, role, prompt):
 2. The idle phase polls inbox and task board in a loop.
 
 ```python
-def _idle_poll(self, name, messages):
-    for _ in range(IDLE_TIMEOUT // POLL_INTERVAL):  # 60s / 5s = 12
-        time.sleep(POLL_INTERVAL)
-        inbox = BUS.read_inbox(name)
-        if inbox:
-            messages.append({"role": "user",
-                "content": f"<inbox>{inbox}</inbox>"})
-            return True
-        unclaimed = scan_unclaimed_tasks()
-        if unclaimed:
-            claim_task(unclaimed[0]["id"], name)
-            messages.append({"role": "user",
-                "content": f"<auto-claimed>Task #{unclaimed[0]['id']}: "
-                           f"{unclaimed[0]['subject']}</auto-claimed>"})
-            return True
-    return False  # timeout -> shutdown
+# -- IDLE PHASE --
+polls = IDLE_TIMEOUT // max(POLL_INTERVAL, 1)
+for _ in range(polls):  # 60s / 5s = 12
+    time.sleep(POLL_INTERVAL)
+    inbox = BUS.read_inbox(name)
+    if inbox:
+        for msg in inbox:
+            messages.append({"role": "user", "content": json.dumps(msg)})
+        resume = True
+        break
+    unclaimed = scan_unclaimed_tasks()
+    if unclaimed:
+        task = unclaimed[0]
+        claim_task(task["id"], name)
+        messages.append({"role": "user",
+            "content": f"<auto-claimed>Task #{task['id']}: "
+                       f"{task['subject']}</auto-claimed>"})
+        resume = True
+        break
 ```
 
 3. Task board scanning: find pending, unowned, unblocked tasks.
@@ -129,8 +139,8 @@ if len(messages) <= 3:
 ## Try It
 
 ```sh
-cd learn-claude-code
-python agents/s11_autonomous_agents.py
+cd learn-ollama-code
+uv run agents/s11_autonomous_agents.py
 ```
 
 1. `Create 3 tasks on the board, then spawn alice and bob. Watch them auto-claim.`

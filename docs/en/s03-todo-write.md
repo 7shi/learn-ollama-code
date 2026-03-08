@@ -62,13 +62,11 @@ TOOL_HANDLERS = {
 3. A nag reminder injects a nudge if the model goes 3+ rounds without calling `todo`.
 
 ```python
-if rounds_since_todo >= 3 and messages:
-    last = messages[-1]
-    if last["role"] == "user" and isinstance(last.get("content"), list):
-        last["content"].insert(0, {
-            "type": "text",
-            "text": "<reminder>Update your todos.</reminder>",
-        })
+if rounds_since_todo >= 3:
+    messages.append({
+        "role": "user",
+        "content": "<reminder>Update your todos.</reminder>",
+    })
 ```
 
 The "one in_progress at a time" constraint forces sequential focus. The nag reminder creates accountability.
@@ -85,8 +83,8 @@ The "one in_progress at a time" constraint forces sequential focus. The nag remi
 ## Try It
 
 ```sh
-cd learn-claude-code
-python agents/s03_todo_write.py
+cd learn-ollama-code
+uv run agents/s03_todo_write.py
 ```
 
 1. `Refactor the file hello.py: add type hints, docstrings, and a main guard`

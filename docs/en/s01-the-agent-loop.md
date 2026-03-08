@@ -18,7 +18,7 @@ A language model can reason about code, but it can't *touch* the real world -- c
                     ^                |
                     |   tool_result  |
                     +----------------+
-                    (loop until stop_reason != "tool_use")
+                    (loop until tool_calls is None)
 ```
 
 One exit condition controls the entire flow. The loop runs until the model stops calling tools.
@@ -34,60 +34,51 @@ messages.append({"role": "user", "content": query})
 2. Send messages + tool definitions to the LLM.
 
 ```python
-response = client.messages.create(
-    model=MODEL, system=SYSTEM, messages=messages,
-    tools=TOOLS, max_tokens=8000,
+response = client.chat(
+    model=MODEL, messages=messages, tools=TOOLS, think=THINK,
 )
 ```
 
-3. Append the assistant response. Check `stop_reason` -- if the model didn't call a tool, we're done.
+3. Append the assistant response. Check `tool_calls` -- if the model didn't call a tool, we're done.
 
 ```python
-messages.append({"role": "assistant", "content": response.content})
-if response.stop_reason != "tool_use":
+messages.append(response.message)
+if not response.message.tool_calls:
     return
 ```
 
-4. Execute each tool call, collect results, append as a user message. Loop back to step 2.
+4. Execute each tool call, append results as tool messages. Loop back to step 2.
 
 ```python
-results = []
-for block in response.content:
-    if block.type == "tool_use":
-        output = run_bash(block.input["command"])
-        results.append({
-            "type": "tool_result",
-            "tool_use_id": block.id,
-            "content": output,
-        })
-messages.append({"role": "user", "content": results})
+for tool in response.message.tool_calls:
+    output = run_bash(tool.function.arguments["command"])
+    messages.append({
+        "role": "tool",
+        "content": output,
+        "tool_name": tool.function.name,
+    })
 ```
 
 Assembled into one function:
 
 ```python
-def agent_loop(query):
-    messages = [{"role": "user", "content": query}]
+def agent_loop(messages):
     while True:
-        response = client.messages.create(
-            model=MODEL, system=SYSTEM, messages=messages,
-            tools=TOOLS, max_tokens=8000,
+        response = client.chat(
+            model=MODEL, messages=messages, tools=TOOLS, think=THINK,
         )
-        messages.append({"role": "assistant", "content": response.content})
+        messages.append(response.message)
 
-        if response.stop_reason != "tool_use":
+        if not response.message.tool_calls:
             return
 
-        results = []
-        for block in response.content:
-            if block.type == "tool_use":
-                output = run_bash(block.input["command"])
-                results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": output,
-                })
-        messages.append({"role": "user", "content": results})
+        for tool in response.message.tool_calls:
+            output = run_bash(tool.function.arguments["command"])
+            messages.append({
+                "role": "tool",
+                "content": output,
+                "tool_name": tool.function.name,
+            })
 ```
 
 That's the entire agent in under 30 lines. Everything else in this course layers on top -- without changing the loop.
@@ -99,13 +90,13 @@ That's the entire agent in under 30 lines. Everything else in this course layers
 | Agent loop    | (none)     | `while True` + stop_reason     |
 | Tools         | (none)     | `bash` (one tool)              |
 | Messages      | (none)     | Accumulating list              |
-| Control flow  | (none)     | `stop_reason != "tool_use"`    |
+| Control flow  | (none)     | `not tool_calls`               |
 
 ## Try It
 
 ```sh
-cd learn-claude-code
-python agents/s01_agent_loop.py
+cd learn-ollama-code
+uv run agents/s01_agent_loop.py
 ```
 
 1. `Create a file called hello.py that prints "Hello, World!"`

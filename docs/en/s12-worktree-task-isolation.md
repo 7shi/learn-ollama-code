@@ -108,8 +108,8 @@ After a crash, state reconstructs from `.tasks/` + `.worktrees/index.json` on di
 ## Try It
 
 ```sh
-cd learn-claude-code
-python agents/s12_worktree_task_isolation.py
+cd learn-ollama-code
+uv run agents/s12_worktree_task_isolation.py
 ```
 
 1. `Create tasks for backend auth and frontend login page, then list tasks.`

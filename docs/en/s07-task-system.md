@@ -115,8 +115,8 @@ From s07 onward, the task graph is the default for multi-step work. s03's Todo r
 ## Try It
 
 ```sh
-cd learn-claude-code
-python agents/s07_task_system.py
+cd learn-ollama-code
+uv run agents/s07_task_system.py
 ```
 
 1. `Create 3 tasks: "Setup project", "Write code", "Write tests". Make them depend on each other in order.`

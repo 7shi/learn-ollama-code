@@ -115,8 +115,8 @@ TOOL_HANDLERS = {
 ## 试一试
 
 ```sh
-cd learn-claude-code
-python agents/s07_task_system.py
+cd learn-ollama-code
+uv run agents/s07_task_system.py
 ```
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):

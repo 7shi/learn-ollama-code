@@ -73,15 +73,17 @@ def _execute(self, task_id, command):
 def agent_loop(messages: list):
     while True:
         notifs = BG.drain_notifications()
-        if notifs:
+        if notifs and messages:
             notif_text = "\n".join(
-                f"[bg:{n['task_id']}] {n['result']}" for n in notifs)
+                f"[bg:{n['task_id']}] {n['status']}: {n['result']}" for n in notifs)
             messages.append({"role": "user",
                 "content": f"<background-results>\n{notif_text}\n"
                            f"</background-results>"})
             messages.append({"role": "assistant",
                 "content": "Noted background results."})
-        response = client.messages.create(...)
+        response = client.chat(
+            model=MODEL, messages=messages, tools=TOOLS, think=THINK,
+        )
 ```
 
 循环保持单线程。只有子进程 I/O 被并行化。
@@ -98,8 +100,8 @@ def agent_loop(messages: list):
 ## 试一试
 
 ```sh
-cd learn-claude-code
-python agents/s08_background_tasks.py
+cd learn-ollama-code
+uv run agents/s08_background_tasks.py
 ```
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):

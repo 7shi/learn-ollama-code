@@ -39,17 +39,15 @@ import subprocess
 import time
 from pathlib import Path
 
-from anthropic import Anthropic
 from dotenv import load_dotenv
+from ollama import Client
 
 load_dotenv(override=True)
 
-if os.getenv("ANTHROPIC_BASE_URL"):
-    os.environ.pop("ANTHROPIC_AUTH_TOKEN", None)
-
 WORKDIR = Path.cwd()
-client = Anthropic(base_url=os.getenv("ANTHROPIC_BASE_URL"))
+client = Client()
 MODEL = os.environ["MODEL_ID"]
+THINK = os.environ.get("THINK") == "1"
 
 SYSTEM = f"You are a coding agent at {WORKDIR}. Use tools to solve tasks."
 
@@ -65,31 +63,16 @@ def estimate_tokens(messages: list) -> int:
 
 # -- Layer 1: micro_compact - replace old tool results with placeholders --
 def micro_compact(messages: list) -> list:
-    # Collect (msg_index, part_index, tool_result_dict) for all tool_result entries
-    tool_results = []
-    for msg_idx, msg in enumerate(messages):
-        if msg["role"] == "user" and isinstance(msg.get("content"), list):
-            for part_idx, part in enumerate(msg["content"]):
-                if isinstance(part, dict) and part.get("type") == "tool_result":
-                    tool_results.append((msg_idx, part_idx, part))
-    if len(tool_results) <= KEEP_RECENT:
+    # Collect indices of all tool result messages
+    tool_indices = [i for i, m in enumerate(messages)
+                    if isinstance(m, dict) and m.get("role") == "tool"]
+    if len(tool_indices) <= KEEP_RECENT:
         return messages
-    # Find tool_name for each result by matching tool_use_id in prior assistant messages
-    tool_name_map = {}
-    for msg in messages:
-        if msg["role"] == "assistant":
-            content = msg.get("content", [])
-            if isinstance(content, list):
-                for block in content:
-                    if hasattr(block, "type") and block.type == "tool_use":
-                        tool_name_map[block.id] = block.name
     # Clear old results (keep last KEEP_RECENT)
-    to_clear = tool_results[:-KEEP_RECENT]
-    for _, _, result in to_clear:
-        if isinstance(result.get("content"), str) and len(result["content"]) > 100:
-            tool_id = result.get("tool_use_id", "")
-            tool_name = tool_name_map.get(tool_id, "unknown")
-            result["content"] = f"[Previous: used {tool_name}]"
+    for i in tool_indices[:-KEEP_RECENT]:
+        msg = messages[i]
+        if isinstance(msg.get("content"), str) and len(msg["content"]) > 100:
+            msg["content"] = f"[Previous: used {msg.get('tool_name', 'unknown')}]"
     return messages
 
 
@@ -100,19 +83,19 @@ def auto_compact(messages: list) -> list:
     transcript_path = TRANSCRIPT_DIR / f"transcript_{int(time.time())}.jsonl"
     with open(transcript_path, "w") as f:
         for msg in messages:
-            f.write(json.dumps(msg, default=str) + "\n")
+            f.write(json.dumps(msg, default=str, ensure_ascii=False) + "\n")
     print(f"[transcript saved: {transcript_path}]")
     # Ask LLM to summarize
-    conversation_text = json.dumps(messages, default=str)[:80000]
-    response = client.messages.create(
+    conversation_text = json.dumps(messages, default=str, ensure_ascii=False)[:80000]
+    response = client.chat(
         model=MODEL,
         messages=[{"role": "user", "content":
             "Summarize this conversation for continuity. Include: "
             "1) What was accomplished, 2) Current state, 3) Key decisions made. "
             "Be concise but preserve critical details.\n\n" + conversation_text}],
-        max_tokens=2000,
+        think=THINK,
     )
-    summary = response.content[0].text
+    summary = response.message.content
     # Replace all messages with compressed summary
     return [
         {"role": "user", "content": f"[Conversation compressed. Transcript: {transcript_path}]\n\n{summary}"},
@@ -178,16 +161,16 @@ TOOL_HANDLERS = {
 }
 
 TOOLS = [
-    {"name": "bash", "description": "Run a shell command.",
-     "input_schema": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}},
-    {"name": "read_file", "description": "Read file contents.",
-     "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["path"]}},
-    {"name": "write_file", "description": "Write content to file.",
-     "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}},
-    {"name": "edit_file", "description": "Replace exact text in file.",
-     "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, "required": ["path", "old_text", "new_text"]}},
-    {"name": "compact", "description": "Trigger manual conversation compression.",
-     "input_schema": {"type": "object", "properties": {"focus": {"type": "string", "description": "What to preserve in the summary"}}}},
+    {"type": "function", "function": {"name": "bash", "description": "Run a shell command.",
+     "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
+    {"type": "function", "function": {"name": "read_file", "description": "Read file contents.",
+     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["path"]}}},
+    {"type": "function", "function": {"name": "write_file", "description": "Write content to file.",
+     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
+    {"type": "function", "function": {"name": "edit_file", "description": "Replace exact text in file.",
+     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, "required": ["path", "old_text", "new_text"]}}},
+    {"type": "function", "function": {"name": "compact", "description": "Trigger manual conversation compression.",
+     "parameters": {"type": "object", "properties": {"focus": {"type": "string"}}}}},
 ]
 
 
@@ -199,29 +182,25 @@ def agent_loop(messages: list):
         if estimate_tokens(messages) > THRESHOLD:
             print("[auto_compact triggered]")
             messages[:] = auto_compact(messages)
-        response = client.messages.create(
-            model=MODEL, system=SYSTEM, messages=messages,
-            tools=TOOLS, max_tokens=8000,
+        response = client.chat(
+            model=MODEL, messages=messages, tools=TOOLS, think=THINK,
         )
-        messages.append({"role": "assistant", "content": response.content})
-        if response.stop_reason != "tool_use":
+        messages.append(response.message)
+        if not response.message.tool_calls:
             return
-        results = []
         manual_compact = False
-        for block in response.content:
-            if block.type == "tool_use":
-                if block.name == "compact":
-                    manual_compact = True
-                    output = "Compressing..."
-                else:
-                    handler = TOOL_HANDLERS.get(block.name)
-                    try:
-                        output = handler(**block.input) if handler else f"Unknown tool: {block.name}"
-                    except Exception as e:
-                        output = f"Error: {e}"
-                print(f"> {block.name}: {str(output)[:200]}")
-                results.append({"type": "tool_result", "tool_use_id": block.id, "content": str(output)})
-        messages.append({"role": "user", "content": results})
+        for tool in response.message.tool_calls:
+            if tool.function.name == "compact":
+                manual_compact = True
+                output = "Compressing..."
+            else:
+                handler = TOOL_HANDLERS.get(tool.function.name)
+                try:
+                    output = handler(**tool.function.arguments) if handler else f"Unknown tool: {tool.function.name}"
+                except Exception as e:
+                    output = f"Error: {e}"
+            print(f"> {tool.function.name}: {str(output)[:200]}")
+            messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
         # Layer 3: manual compact triggered by the compact tool
         if manual_compact:
             print("[manual compact]")
@@ -229,7 +208,7 @@ def agent_loop(messages: list):
 
 
 if __name__ == "__main__":
-    history = []
+    history = [{"role": "system", "content": SYSTEM}]
     while True:
         try:
             query = input("\033[36ms06 >> \033[0m")
@@ -239,9 +218,8 @@ if __name__ == "__main__":
             break
         history.append({"role": "user", "content": query})
         agent_loop(history)
-        response_content = history[-1]["content"]
-        if isinstance(response_content, list):
-            for block in response_content:
-                if hasattr(block, "text"):
-                    print(block.text)
+        last = history[-1]
+        content = last.content if hasattr(last, "content") else last.get("content", "")
+        if content:
+            print(content)
         print()

@@ -36,17 +36,15 @@ import subprocess
 import time
 from pathlib import Path
 
-from anthropic import Anthropic
 from dotenv import load_dotenv
+from ollama import Client
 
 load_dotenv(override=True)
 
-if os.getenv("ANTHROPIC_BASE_URL"):
-    os.environ.pop("ANTHROPIC_AUTH_TOKEN", None)
-
 WORKDIR = Path.cwd()
-client = Anthropic(base_url=os.getenv("ANTHROPIC_BASE_URL"))
+client = Client()
 MODEL = os.environ["MODEL_ID"]
+THINK = os.environ.get("THINK") == "1"
 
 
 def detect_repo_root(cwd: Path) -> Path | None:
@@ -102,7 +100,7 @@ class EventBus:
         if error:
             payload["error"] = error
         with self.path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(payload) + "\n")
+            f.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
     def list_recent(self, limit: int = 20) -> str:
         n = max(1, min(int(limit or 20), 200))
@@ -114,7 +112,7 @@ class EventBus:
                 items.append(json.loads(line))
             except Exception:
                 items.append({"event": "parse_error", "raw": line})
-        return json.dumps(items, indent=2)
+        return json.dumps(items, indent=2, ensure_ascii=False)
 
 
 # -- TaskManager: persistent task board with optional worktree binding --
@@ -143,7 +141,7 @@ class TaskManager:
         return json.loads(path.read_text())
 
     def _save(self, task: dict):
-        self._path(task["id"]).write_text(json.dumps(task, indent=2))
+        self._path(task["id"]).write_text(json.dumps(task, indent=2, ensure_ascii=False))
 
     def create(self, subject: str, description: str = "") -> str:
         task = {
@@ -159,10 +157,10 @@ class TaskManager:
         }
         self._save(task)
         self._next_id += 1
-        return json.dumps(task, indent=2)
+        return json.dumps(task, indent=2, ensure_ascii=False)
 
     def get(self, task_id: int) -> str:
-        return json.dumps(self._load(task_id), indent=2)
+        return json.dumps(self._load(task_id), indent=2, ensure_ascii=False)
 
     def exists(self, task_id: int) -> bool:
         return self._path(task_id).exists()
@@ -177,7 +175,7 @@ class TaskManager:
             task["owner"] = owner
         task["updated_at"] = time.time()
         self._save(task)
-        return json.dumps(task, indent=2)
+        return json.dumps(task, indent=2, ensure_ascii=False)
 
     def bind_worktree(self, task_id: int, worktree: str, owner: str = "") -> str:
         task = self._load(task_id)
@@ -188,14 +186,14 @@ class TaskManager:
             task["status"] = "in_progress"
         task["updated_at"] = time.time()
         self._save(task)
-        return json.dumps(task, indent=2)
+        return json.dumps(task, indent=2, ensure_ascii=False)
 
     def unbind_worktree(self, task_id: int) -> str:
         task = self._load(task_id)
         task["worktree"] = ""
         task["updated_at"] = time.time()
         self._save(task)
-        return json.dumps(task, indent=2)
+        return json.dumps(task, indent=2, ensure_ascii=False)
 
     def list_all(self) -> str:
         tasks = []
@@ -230,7 +228,7 @@ class WorktreeManager:
         self.dir.mkdir(parents=True, exist_ok=True)
         self.index_path = self.dir / "index.json"
         if not self.index_path.exists():
-            self.index_path.write_text(json.dumps({"worktrees": []}, indent=2))
+            self.index_path.write_text(json.dumps({"worktrees": []}, indent=2, ensure_ascii=False))
         self.git_available = self._is_git_repo()
 
     def _is_git_repo(self) -> bool:
@@ -265,7 +263,7 @@ class WorktreeManager:
         return json.loads(self.index_path.read_text())
 
     def _save_index(self, data: dict):
-        self.index_path.write_text(json.dumps(data, indent=2))
+        self.index_path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
     def _find(self, name: str) -> dict | None:
         idx = self._load_index()
@@ -323,7 +321,7 @@ class WorktreeManager:
                     "status": "active",
                 },
             )
-            return json.dumps(entry, indent=2)
+            return json.dumps(entry, indent=2, ensure_ascii=False)
         except Exception as e:
             self.events.emit(
                 "worktree.create.failed",
@@ -467,7 +465,7 @@ class WorktreeManager:
                 "status": "kept",
             },
         )
-        return json.dumps(kept, indent=2) if kept else f"Error: Unknown worktree '{name}'"
+        return json.dumps(kept, indent=2, ensure_ascii=False) if kept else f"Error: Unknown worktree '{name}'"
 
 
 WORKTREES = WorktreeManager(REPO_ROOT, TASKS, EVENTS)
@@ -552,209 +550,105 @@ TOOL_HANDLERS = {
 }
 
 TOOLS = [
-    {
+    {"type": "function", "function": {
         "name": "bash",
         "description": "Run a shell command in the current workspace (blocking).",
-        "input_schema": {
-            "type": "object",
-            "properties": {"command": {"type": "string"}},
-            "required": ["command"],
-        },
-    },
-    {
+        "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]},
+    }},
+    {"type": "function", "function": {
         "name": "read_file",
         "description": "Read file contents.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "path": {"type": "string"},
-                "limit": {"type": "integer"},
-            },
-            "required": ["path"],
-        },
-    },
-    {
+        "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["path"]},
+    }},
+    {"type": "function", "function": {
         "name": "write_file",
         "description": "Write content to file.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "path": {"type": "string"},
-                "content": {"type": "string"},
-            },
-            "required": ["path", "content"],
-        },
-    },
-    {
+        "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]},
+    }},
+    {"type": "function", "function": {
         "name": "edit_file",
         "description": "Replace exact text in file.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "path": {"type": "string"},
-                "old_text": {"type": "string"},
-                "new_text": {"type": "string"},
-            },
-            "required": ["path", "old_text", "new_text"],
-        },
-    },
-    {
+        "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, "required": ["path", "old_text", "new_text"]},
+    }},
+    {"type": "function", "function": {
         "name": "task_create",
         "description": "Create a new task on the shared task board.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "subject": {"type": "string"},
-                "description": {"type": "string"},
-            },
-            "required": ["subject"],
-        },
-    },
-    {
+        "parameters": {"type": "object", "properties": {"subject": {"type": "string"}, "description": {"type": "string"}}, "required": ["subject"]},
+    }},
+    {"type": "function", "function": {
         "name": "task_list",
         "description": "List all tasks with status, owner, and worktree binding.",
-        "input_schema": {"type": "object", "properties": {}},
-    },
-    {
+        "parameters": {"type": "object", "properties": {}},
+    }},
+    {"type": "function", "function": {
         "name": "task_get",
         "description": "Get task details by ID.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"task_id": {"type": "integer"}},
-            "required": ["task_id"],
-        },
-    },
-    {
+        "parameters": {"type": "object", "properties": {"task_id": {"type": "integer"}}, "required": ["task_id"]},
+    }},
+    {"type": "function", "function": {
         "name": "task_update",
         "description": "Update task status or owner.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "task_id": {"type": "integer"},
-                "status": {
-                    "type": "string",
-                    "enum": ["pending", "in_progress", "completed"],
-                },
-                "owner": {"type": "string"},
-            },
-            "required": ["task_id"],
-        },
-    },
-    {
+        "parameters": {"type": "object", "properties": {"task_id": {"type": "integer"}, "status": {"type": "string", "enum": ["pending", "in_progress", "completed"]}, "owner": {"type": "string"}}, "required": ["task_id"]},
+    }},
+    {"type": "function", "function": {
         "name": "task_bind_worktree",
         "description": "Bind a task to a worktree name.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "task_id": {"type": "integer"},
-                "worktree": {"type": "string"},
-                "owner": {"type": "string"},
-            },
-            "required": ["task_id", "worktree"],
-        },
-    },
-    {
+        "parameters": {"type": "object", "properties": {"task_id": {"type": "integer"}, "worktree": {"type": "string"}, "owner": {"type": "string"}}, "required": ["task_id", "worktree"]},
+    }},
+    {"type": "function", "function": {
         "name": "worktree_create",
         "description": "Create a git worktree and optionally bind it to a task.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "name": {"type": "string"},
-                "task_id": {"type": "integer"},
-                "base_ref": {"type": "string"},
-            },
-            "required": ["name"],
-        },
-    },
-    {
+        "parameters": {"type": "object", "properties": {"name": {"type": "string"}, "task_id": {"type": "integer"}, "base_ref": {"type": "string"}}, "required": ["name"]},
+    }},
+    {"type": "function", "function": {
         "name": "worktree_list",
         "description": "List worktrees tracked in .worktrees/index.json.",
-        "input_schema": {"type": "object", "properties": {}},
-    },
-    {
+        "parameters": {"type": "object", "properties": {}},
+    }},
+    {"type": "function", "function": {
         "name": "worktree_status",
         "description": "Show git status for one worktree.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"name": {"type": "string"}},
-            "required": ["name"],
-        },
-    },
-    {
+        "parameters": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]},
+    }},
+    {"type": "function", "function": {
         "name": "worktree_run",
         "description": "Run a shell command in a named worktree directory.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "name": {"type": "string"},
-                "command": {"type": "string"},
-            },
-            "required": ["name", "command"],
-        },
-    },
-    {
+        "parameters": {"type": "object", "properties": {"name": {"type": "string"}, "command": {"type": "string"}}, "required": ["name", "command"]},
+    }},
+    {"type": "function", "function": {
         "name": "worktree_remove",
         "description": "Remove a worktree and optionally mark its bound task completed.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "name": {"type": "string"},
-                "force": {"type": "boolean"},
-                "complete_task": {"type": "boolean"},
-            },
-            "required": ["name"],
-        },
-    },
-    {
+        "parameters": {"type": "object", "properties": {"name": {"type": "string"}, "force": {"type": "boolean"}, "complete_task": {"type": "boolean"}}, "required": ["name"]},
+    }},
+    {"type": "function", "function": {
         "name": "worktree_keep",
         "description": "Mark a worktree as kept in lifecycle state without removing it.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"name": {"type": "string"}},
-            "required": ["name"],
-        },
-    },
-    {
+        "parameters": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]},
+    }},
+    {"type": "function", "function": {
         "name": "worktree_events",
         "description": "List recent worktree/task lifecycle events from .worktrees/events.jsonl.",
-        "input_schema": {
-            "type": "object",
-            "properties": {"limit": {"type": "integer"}},
-        },
-    },
+        "parameters": {"type": "object", "properties": {"limit": {"type": "integer"}}},
+    }},
 ]
 
 
 def agent_loop(messages: list):
     while True:
-        response = client.messages.create(
-            model=MODEL,
-            system=SYSTEM,
-            messages=messages,
-            tools=TOOLS,
-            max_tokens=8000,
+        response = client.chat(
+            model=MODEL, messages=messages, tools=TOOLS, think=THINK,
         )
-        messages.append({"role": "assistant", "content": response.content})
-        if response.stop_reason != "tool_use":
+        messages.append(response.message)
+        if not response.message.tool_calls:
             return
-
-        results = []
-        for block in response.content:
-            if block.type == "tool_use":
-                handler = TOOL_HANDLERS.get(block.name)
-                try:
-                    output = handler(**block.input) if handler else f"Unknown tool: {block.name}"
-                except Exception as e:
-                    output = f"Error: {e}"
-                print(f"> {block.name}: {str(output)[:200]}")
-                results.append(
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": str(output),
-                    }
-                )
-        messages.append({"role": "user", "content": results})
+        for tool in response.message.tool_calls:
+            handler = TOOL_HANDLERS.get(tool.function.name)
+            try:
+                output = handler(**tool.function.arguments) if handler else f"Unknown tool: {tool.function.name}"
+            except Exception as e:
+                output = f"Error: {e}"
+            print(f"> {tool.function.name}: {str(output)[:200]}")
+            messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
 
 
 if __name__ == "__main__":
@@ -762,7 +656,7 @@ if __name__ == "__main__":
     if not WORKTREES.git_available:
         print("Note: Not in a git repo. worktree_* tools will return errors.")
 
-    history = []
+    history = [{"role": "system", "content": SYSTEM}]
     while True:
         try:
             query = input("\033[36ms12 >> \033[0m")
@@ -772,9 +666,8 @@ if __name__ == "__main__":
             break
         history.append({"role": "user", "content": query})
         agent_loop(history)
-        response_content = history[-1]["content"]
-        if isinstance(response_content, list):
-            for block in response_content:
-                if hasattr(block, "text"):
-                    print(block.text)
+        last = history[-1]
+        content = last.content if hasattr(last, "content") else last.get("content", "")
+        if content:
+            print(content)
         print()

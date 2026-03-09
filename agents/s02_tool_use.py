@@ -5,15 +5,15 @@ s02_tool_use.py - Tools
 The agent loop from s01 didn't change. We just added tools to the array
 and a dispatch map to route calls.
 
-    +----------+      +-------+      +------------------+
-    |   User   | ---> |  LLM  | ---> | Tool Dispatch    |
-    |  prompt  |      |       |      | {                |
-    +----------+      +---+---+      |   bash: run_bash |
-                          ^          |   read: run_read |
-                          |          |   write: run_wr  |
-                          +----------+   edit: run_edit |
-                          tool_result| }                |
-                                     +------------------+
+    +----------+      +-------+      +---------------+
+    |   User   | ---> |  LLM  | ---> | Tool Dispatch |
+    |  prompt  |      |       |      | {             |
+    +----------+      +---+---+      |   bash        |
+                          ^          |   read_file   |
+                          |          |   write_file  |
+                          +----------+   edit_file   |
+                          tool_result| }             |
+                                     +---------------+
 
 Key insight: "The loop didn't change at all. I just added tools."
 """

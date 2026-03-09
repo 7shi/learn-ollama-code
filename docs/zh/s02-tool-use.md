@@ -13,15 +13,15 @@
 ## 解决方案
 
 ```
-+--------+      +-------+       +---------------+
-|  User  | ---> |  LLM  | ----> | Tool Dispatch |
-| prompt |      |       |       | {             |
-+--------+      +---+---+       |   bash        |
-                    ^           |   read_file   |
-                    |           |   write_file  |
-                    +-----------+   edit_file   |
-                    tool_result | }             |
-                                +---------------+
++--------+      +-------+      +---------------+
+|  User  | ---> |  LLM  | ---> | Tool Dispatch |
+| prompt |      |       |      | {             |
++--------+      +---+---+      |   bash        |
+                    ^          |   read_file   |
+                    |          |   write_file  |
+                    +----------+   edit_file   |
+                    tool_result| }             |
+                               +---------------+
 
 The dispatch map is a dict: {tool_name: handler_function}.
 One lookup replaces any if/elif chain.

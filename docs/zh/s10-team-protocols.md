@@ -45,7 +45,7 @@ Trackers:
 ```python
 shutdown_requests = {}
 
-def handle_shutdown_request(teammate: str) -> str:
+def shutdown_request(teammate: str) -> str:
     req_id = str(uuid.uuid4())[:8]
     shutdown_requests[req_id] = {"target": teammate, "status": "pending"}
     BUS.send("lead", teammate, "Please shut down gracefully.",
@@ -70,7 +70,7 @@ if tool_name == "shutdown_response":
 ```python
 plan_requests = {}
 
-def handle_plan_review(request_id, approve, feedback=""):
+def plan_approval(request_id, approve, feedback=""):
     req = plan_requests[request_id]
     req["status"] = "approved" if approve else "rejected"
     BUS.send("lead", req["from"], feedback,

@@ -51,7 +51,7 @@ if not response.message.tool_calls:
 
 ```python
 for tool in response.message.tool_calls:
-    output = run_bash(tool.function.arguments["command"])
+    output = bash(tool.function.arguments["command"])
     messages.append({
         "role": "tool",
         "content": output,
@@ -73,7 +73,7 @@ def agent_loop(messages):
             return
 
         for tool in response.message.tool_calls:
-            output = run_bash(tool.function.arguments["command"])
+            output = bash(tool.function.arguments["command"])
             messages.append({
                 "role": "tool",
                 "content": output,

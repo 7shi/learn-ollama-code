@@ -29,15 +29,17 @@ Parent context stays clean. Subagent context is discarded.
 1. The parent gets a `task` tool. The child gets all base tools except `task` (no recursive spawning).
 
 ```python
-PARENT_TOOLS = CHILD_TOOLS + [
-    {"type": "function", "function": {"name": "task",
-     "description": "Spawn a subagent with fresh context.",
-     "parameters": {
-         "type": "object",
-         "properties": {"prompt": {"type": "string"}},
-         "required": ["prompt"],
-     }}},
-]
+def task(prompt: str, description: str = ""):
+    """
+    Spawn a subagent with fresh context. It shares the filesystem but not conversation history.
+
+    Args:
+        prompt (str): The task for the subagent to complete
+        description (str): Short label describing the subtask
+    """
+
+CHILD_TOOLS = [bash, read_file, write_file, edit_file]
+PARENT_TOOLS = CHILD_TOOLS + [task]
 ```
 
 2. The subagent starts with `messages=[]` and runs its own loop. Only the final text returns to the parent.

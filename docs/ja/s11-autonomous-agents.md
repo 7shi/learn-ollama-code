@@ -92,7 +92,7 @@ for _ in range(polls):  # 60s / 5s = 12
     unclaimed = scan_unclaimed_tasks()
     if unclaimed:
         task = unclaimed[0]
-        claim_task(task["id"], name)
+        _claim_task(task["id"], name)
         messages.append({"role": "user",
             "content": f"<auto-claimed>Task #{task['id']}: "
                        f"{task['subject']}</auto-claimed>"})

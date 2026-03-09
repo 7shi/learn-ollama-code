@@ -76,9 +76,13 @@ SYSTEM = f"""You are a coding agent at {WORKDIR}.
 Skills available:
 {SKILL_LOADER.get_descriptions()}"""
 
+def load_skill(name: str) -> str:
+    """Load specialized knowledge by name."""
+    return SKILL_LOADER.get_content(name)
+
 TOOL_HANDLERS = {
     # ...base tools...
-    "load_skill": lambda **kw: SKILL_LOADER.get_content(kw["name"]),
+    "load_skill": load_skill,
 }
 ```
 

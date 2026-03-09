@@ -29,15 +29,17 @@ Parent context stays clean. Subagent context is discarded.
 1. 父智能体有一个 `task` 工具。子智能体拥有除 `task` 外的所有基础工具 (禁止递归生成)。
 
 ```python
-PARENT_TOOLS = CHILD_TOOLS + [
-    {"type": "function", "function": {"name": "task",
-     "description": "Spawn a subagent with fresh context.",
-     "parameters": {
-         "type": "object",
-         "properties": {"prompt": {"type": "string"}},
-         "required": ["prompt"],
-     }}},
-]
+def task(prompt: str, description: str = ""):
+    """
+    Spawn a subagent with fresh context. It shares the filesystem but not conversation history.
+
+    Args:
+        prompt (str): The task for the subagent to complete
+        description (str): Short label describing the subtask
+    """
+
+CHILD_TOOLS = [bash, read_file, write_file, edit_file]
+PARENT_TOOLS = CHILD_TOOLS + [task]
 ```
 
 2. 子智能体以 `messages=[]` 启动, 运行自己的循环。只有最终文本返回给父智能体。

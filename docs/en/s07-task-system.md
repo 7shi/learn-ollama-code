@@ -93,10 +93,10 @@ def update(self, task_id, status=None,
 ```python
 TOOL_HANDLERS = {
     # ...base tools...
-    "task_create": lambda **kw: TASKS.create(kw["subject"]),
+    "task_create": task_create,
     "task_update": lambda **kw: TASKS.update(kw["task_id"], kw.get("status")),
-    "task_list":   lambda **kw: TASKS.list_all(),
-    "task_get":    lambda **kw: TASKS.get(kw["task_id"]),
+    "task_list":   task_list,
+    "task_get":    task_get,
 }
 ```
 

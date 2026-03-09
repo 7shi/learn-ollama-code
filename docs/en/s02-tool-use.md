@@ -89,7 +89,7 @@ cd learn-ollama-code
 uv run agents/s02_tool_use.py
 ```
 
-1. `Read the file requirements.txt`
+1. `Read the file pyproject.toml`
 2. `Create a file called greet.py with a greet(name) function`
 3. `Edit greet.py to add a docstring to the function`
 4. `Read greet.py to verify the edit worked`

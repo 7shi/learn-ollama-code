@@ -216,13 +216,13 @@ class TeammateManager:
     def _exec(self, sender: str, tool_name: str, args: dict) -> str:
         # these base tools are unchanged from s02
         if tool_name == "bash":
-            return _run_bash(args["command"])
+            return bash(args["command"])
         if tool_name == "read_file":
-            return _run_read(args["path"])
+            return read_file(args["path"])
         if tool_name == "write_file":
-            return _run_write(args["path"], args["content"])
+            return write_file(args["path"], args["content"])
         if tool_name == "edit_file":
-            return _run_edit(args["path"], args["old_text"], args["new_text"])
+            return edit_file(args["path"], args["old_text"], args["new_text"])
         if tool_name == "send_message":
             return BUS.send(sender, args["to"], args["content"], args.get("msg_type", "message"))
         if tool_name == "read_inbox":
@@ -251,25 +251,21 @@ class TeammateManager:
         return f"Unknown tool: {tool_name}"
 
     def _teammate_tools(self) -> list:
-        # these base tools are unchanged from s02
-        return [
-            {"type": "function", "function": {"name": "bash", "description": "Run a shell command.",
-             "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
-            {"type": "function", "function": {"name": "read_file", "description": "Read file contents.",
-             "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}},
-            {"type": "function", "function": {"name": "write_file", "description": "Write content to file.",
-             "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
-            {"type": "function", "function": {"name": "edit_file", "description": "Replace exact text in file.",
-             "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, "required": ["path", "old_text", "new_text"]}}},
-            {"type": "function", "function": {"name": "send_message", "description": "Send message to a teammate.",
-             "parameters": {"type": "object", "properties": {"to": {"type": "string"}, "content": {"type": "string"}, "msg_type": {"type": "string", "enum": list(VALID_MSG_TYPES)}}, "required": ["to", "content"]}}},
-            {"type": "function", "function": {"name": "read_inbox", "description": "Read and drain your inbox.",
-             "parameters": {"type": "object", "properties": {}}}},
-            {"type": "function", "function": {"name": "shutdown_response", "description": "Respond to a shutdown request. Approve to shut down, reject to keep working.",
-             "parameters": {"type": "object", "properties": {"request_id": {"type": "string"}, "approve": {"type": "boolean"}, "reason": {"type": "string"}}, "required": ["request_id", "approve"]}}},
-            {"type": "function", "function": {"name": "plan_approval", "description": "Submit a plan for lead approval. Provide plan text.",
-             "parameters": {"type": "object", "properties": {"plan": {"type": "string"}}, "required": ["plan"]}}},
-        ]
+        # send_message/shutdown_response/plan_approval use enum or differ from lead versions
+        SHUTDOWN_RESPONSE_TOOL = {"type": "function", "function": {"name": "shutdown_response",
+            "description": "Respond to a shutdown request. Approve to shut down, reject to keep working.",
+            "parameters": {"type": "object", "properties": {
+                "request_id": {"type": "string"},
+                "approve":    {"type": "boolean"},
+                "reason":     {"type": "string"},
+            }, "required": ["request_id", "approve"]}}}
+        PLAN_APPROVAL_TOOL = {"type": "function", "function": {"name": "plan_approval",
+            "description": "Submit a plan for lead approval. Provide plan text.",
+            "parameters": {"type": "object", "properties": {
+                "plan": {"type": "string"},
+            }, "required": ["plan"]}}}
+        return [bash, read_file, write_file, edit_file,
+                SEND_MESSAGE_TOOL, read_inbox, SHUTDOWN_RESPONSE_TOOL, PLAN_APPROVAL_TOOL]
 
     def list_all(self) -> str:
         if not self.config["members"]:
@@ -287,14 +283,23 @@ TEAM = TeammateManager(TEAM_DIR)
 
 
 # -- Base tool implementations (these base tools are unchanged from s02) --
-def _safe_path(p: str) -> Path:
+def safe_path(p: str) -> Path:
     path = (WORKDIR / p).resolve()
     if not path.is_relative_to(WORKDIR):
         raise ValueError(f"Path escapes workspace: {p}")
     return path
 
 
-def _run_bash(command: str) -> str:
+def bash(command: str) -> str:
+    """
+    Run a shell command.
+
+    Args:
+        command (str): The shell command to execute
+
+    Returns:
+        str: The output of the command
+    """
     dangerous = ["rm -rf /", "sudo", "shutdown", "reboot"]
     if any(d in command for d in dangerous):
         return "Error: Dangerous command blocked"
@@ -309,9 +314,19 @@ def _run_bash(command: str) -> str:
         return "Error: Timeout (120s)"
 
 
-def _run_read(path: str, limit: int = None) -> str:
+def read_file(path: str, limit: int = None) -> str:
+    """
+    Read file contents.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        limit (int): Maximum number of lines to return
+
+    Returns:
+        str: The file contents
+    """
     try:
-        lines = _safe_path(path).read_text().splitlines()
+        lines = safe_path(path).read_text().splitlines()
         if limit and limit < len(lines):
             lines = lines[:limit] + [f"... ({len(lines) - limit} more)"]
         return "\n".join(lines)[:50000]
@@ -319,9 +334,19 @@ def _run_read(path: str, limit: int = None) -> str:
         return f"Error: {e}"
 
 
-def _run_write(path: str, content: str) -> str:
+def write_file(path: str, content: str) -> str:
+    """
+    Write content to file.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        content (str): Content to write
+
+    Returns:
+        str: Success or error message
+    """
     try:
-        fp = _safe_path(path)
+        fp = safe_path(path)
         fp.parent.mkdir(parents=True, exist_ok=True)
         fp.write_text(content)
         return f"Wrote {len(content)} bytes"
@@ -329,9 +354,20 @@ def _run_write(path: str, content: str) -> str:
         return f"Error: {e}"
 
 
-def _run_edit(path: str, old_text: str, new_text: str) -> str:
+def edit_file(path: str, old_text: str, new_text: str) -> str:
+    """
+    Replace exact text in file.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        old_text (str): Exact text to find and replace
+        new_text (str): Replacement text
+
+    Returns:
+        str: Success or error message
+    """
     try:
-        fp = _safe_path(path)
+        fp = safe_path(path)
         c = fp.read_text()
         if old_text not in c:
             return f"Error: Text not found in {path}"
@@ -341,8 +377,75 @@ def _run_edit(path: str, old_text: str, new_text: str) -> str:
         return f"Error: {e}"
 
 
+def read_inbox() -> str:
+    """
+    Read and drain your inbox.
+
+    Returns:
+        str: Inbox messages as JSON
+    """
+    return json.dumps(BUS.read_inbox("lead"), indent=2, ensure_ascii=False)
+
+
+# send_message has msg_type enum that can't be expressed with type hints alone
+SEND_MESSAGE_TOOL = {"type": "function", "function": {"name": "send_message",
+    "description": "Send a message to a teammate's inbox.",
+    "parameters": {"type": "object", "properties": {
+        "to":       {"type": "string"},
+        "content":  {"type": "string"},
+        "msg_type": {"type": "string", "enum": list(VALID_MSG_TYPES)},
+    }, "required": ["to", "content"]}}}
+
+
 # -- Lead-specific protocol handlers --
-def handle_shutdown_request(teammate: str) -> str:
+def spawn_teammate(name: str, role: str, prompt: str) -> str:
+    """
+    Spawn a persistent teammate that runs in its own thread.
+
+    Args:
+        name (str): Unique name for the teammate
+        role (str): Role description for the teammate
+        prompt (str): Initial task prompt for the teammate
+
+    Returns:
+        str: Confirmation message
+    """
+    return TEAM.spawn(name, role, prompt)
+
+
+def list_teammates() -> str:
+    """
+    List all teammates with name, role, status.
+
+    Returns:
+        str: Team roster
+    """
+    return TEAM.list_all()
+
+
+def broadcast(content: str) -> str:
+    """
+    Send a message to all teammates.
+
+    Args:
+        content (str): Message to broadcast
+
+    Returns:
+        str: Confirmation message
+    """
+    return BUS.broadcast("lead", content, TEAM.member_names())
+
+
+def shutdown_request(teammate: str) -> str:
+    """
+    Request a teammate to shut down gracefully. Returns a request_id for tracking.
+
+    Args:
+        teammate (str): Name of the teammate to shut down
+
+    Returns:
+        str: Confirmation with request_id
+    """
     req_id = str(uuid.uuid4())[:8]
     with _tracker_lock:
         shutdown_requests[req_id] = {"target": teammate, "status": "pending"}
@@ -353,7 +456,32 @@ def handle_shutdown_request(teammate: str) -> str:
     return f"Shutdown request {req_id} sent to '{teammate}' (status: pending)"
 
 
-def handle_plan_review(request_id: str, approve: bool, feedback: str = "") -> str:
+def shutdown_response(request_id: str) -> str:
+    """
+    Check the status of a shutdown request by request_id.
+
+    Args:
+        request_id (str): The request ID to check
+
+    Returns:
+        str: Status of the shutdown request as JSON
+    """
+    with _tracker_lock:
+        return json.dumps(shutdown_requests.get(request_id, {"error": "not found"}), ensure_ascii=False)
+
+
+def plan_approval(request_id: str, approve: bool, feedback: str = "") -> str:
+    """
+    Approve or reject a teammate's plan. Provide request_id + approve + optional feedback.
+
+    Args:
+        request_id (str): The plan request ID
+        approve (bool): Whether to approve the plan
+        feedback (str): Optional feedback message
+
+    Returns:
+        str: Confirmation message
+    """
     with _tracker_lock:
         req = plan_requests.get(request_id)
     if not req:
@@ -367,54 +495,25 @@ def handle_plan_review(request_id: str, approve: bool, feedback: str = "") -> st
     return f"Plan {req['status']} for '{req['from']}'"
 
 
-def _check_shutdown_status(request_id: str) -> str:
-    with _tracker_lock:
-        return json.dumps(shutdown_requests.get(request_id, {"error": "not found"}), ensure_ascii=False)
-
-
 # -- Lead tool dispatch (12 tools) --
 TOOL_HANDLERS = {
-    "bash":              lambda **kw: _run_bash(kw["command"]),
-    "read_file":         lambda **kw: _run_read(kw["path"], kw.get("limit")),
-    "write_file":        lambda **kw: _run_write(kw["path"], kw["content"]),
-    "edit_file":         lambda **kw: _run_edit(kw["path"], kw["old_text"], kw["new_text"]),
-    "spawn_teammate":    lambda **kw: TEAM.spawn(kw["name"], kw["role"], kw["prompt"]),
-    "list_teammates":    lambda **kw: TEAM.list_all(),
+    "bash":              bash,
+    "read_file":         read_file,
+    "write_file":        write_file,
+    "edit_file":         edit_file,
+    "spawn_teammate":    spawn_teammate,
+    "list_teammates":    list_teammates,
     "send_message":      lambda **kw: BUS.send("lead", kw["to"], kw["content"], kw.get("msg_type", "message")),
-    "read_inbox":        lambda **kw: json.dumps(BUS.read_inbox("lead"), indent=2, ensure_ascii=False),
-    "broadcast":         lambda **kw: BUS.broadcast("lead", kw["content"], TEAM.member_names()),
-    "shutdown_request":  lambda **kw: handle_shutdown_request(kw["teammate"]),
-    "shutdown_response": lambda **kw: _check_shutdown_status(kw.get("request_id", "")),
-    "plan_approval":     lambda **kw: handle_plan_review(kw["request_id"], kw["approve"], kw.get("feedback", "")),
+    "read_inbox":        read_inbox,
+    "broadcast":         broadcast,
+    "shutdown_request":  shutdown_request,
+    "shutdown_response": shutdown_response,
+    "plan_approval":     plan_approval,
 }
 
-# these base tools are unchanged from s02
-TOOLS = [
-    {"type": "function", "function": {"name": "bash", "description": "Run a shell command.",
-     "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
-    {"type": "function", "function": {"name": "read_file", "description": "Read file contents.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["path"]}}},
-    {"type": "function", "function": {"name": "write_file", "description": "Write content to file.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
-    {"type": "function", "function": {"name": "edit_file", "description": "Replace exact text in file.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, "required": ["path", "old_text", "new_text"]}}},
-    {"type": "function", "function": {"name": "spawn_teammate", "description": "Spawn a persistent teammate.",
-     "parameters": {"type": "object", "properties": {"name": {"type": "string"}, "role": {"type": "string"}, "prompt": {"type": "string"}}, "required": ["name", "role", "prompt"]}}},
-    {"type": "function", "function": {"name": "list_teammates", "description": "List all teammates.",
-     "parameters": {"type": "object", "properties": {}}}},
-    {"type": "function", "function": {"name": "send_message", "description": "Send a message to a teammate.",
-     "parameters": {"type": "object", "properties": {"to": {"type": "string"}, "content": {"type": "string"}, "msg_type": {"type": "string", "enum": list(VALID_MSG_TYPES)}}, "required": ["to", "content"]}}},
-    {"type": "function", "function": {"name": "read_inbox", "description": "Read and drain the lead's inbox.",
-     "parameters": {"type": "object", "properties": {}}}},
-    {"type": "function", "function": {"name": "broadcast", "description": "Send a message to all teammates.",
-     "parameters": {"type": "object", "properties": {"content": {"type": "string"}}, "required": ["content"]}}},
-    {"type": "function", "function": {"name": "shutdown_request", "description": "Request a teammate to shut down gracefully. Returns a request_id for tracking.",
-     "parameters": {"type": "object", "properties": {"teammate": {"type": "string"}}, "required": ["teammate"]}}},
-    {"type": "function", "function": {"name": "shutdown_response", "description": "Check the status of a shutdown request by request_id.",
-     "parameters": {"type": "object", "properties": {"request_id": {"type": "string"}}, "required": ["request_id"]}}},
-    {"type": "function", "function": {"name": "plan_approval", "description": "Approve or reject a teammate's plan. Provide request_id + approve + optional feedback.",
-     "parameters": {"type": "object", "properties": {"request_id": {"type": "string"}, "approve": {"type": "boolean"}, "feedback": {"type": "string"}}, "required": ["request_id", "approve"]}}},
-]
+TOOLS = [bash, read_file, write_file, edit_file,
+         spawn_teammate, list_teammates, SEND_MESSAGE_TOOL, read_inbox, broadcast,
+         shutdown_request, shutdown_response, plan_approval]
 
 
 def agent_loop(messages: list):

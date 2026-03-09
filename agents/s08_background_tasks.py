@@ -119,7 +119,16 @@ def safe_path(p: str) -> Path:
         raise ValueError(f"Path escapes workspace: {p}")
     return path
 
-def run_bash(command: str) -> str:
+def bash(command: str) -> str:
+    """
+    Run a shell command (blocking).
+
+    Args:
+        command (str): The shell command to execute
+
+    Returns:
+        str: The output of the command
+    """
     dangerous = ["rm -rf /", "sudo", "shutdown", "reboot", "> /dev/"]
     if any(d in command for d in dangerous):
         return "Error: Dangerous command blocked"
@@ -131,7 +140,18 @@ def run_bash(command: str) -> str:
     except subprocess.TimeoutExpired:
         return "Error: Timeout (120s)"
 
-def run_read(path: str, limit: int = None) -> str:
+
+def read_file(path: str, limit: int = None) -> str:
+    """
+    Read file contents.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        limit (int): Maximum number of lines to return
+
+    Returns:
+        str: The file contents
+    """
     try:
         lines = safe_path(path).read_text().splitlines()
         if limit and limit < len(lines):
@@ -140,7 +160,18 @@ def run_read(path: str, limit: int = None) -> str:
     except Exception as e:
         return f"Error: {e}"
 
-def run_write(path: str, content: str) -> str:
+
+def write_file(path: str, content: str) -> str:
+    """
+    Write content to file.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        content (str): Content to write
+
+    Returns:
+        str: Success or error message
+    """
     try:
         fp = safe_path(path)
         fp.parent.mkdir(parents=True, exist_ok=True)
@@ -149,7 +180,19 @@ def run_write(path: str, content: str) -> str:
     except Exception as e:
         return f"Error: {e}"
 
-def run_edit(path: str, old_text: str, new_text: str) -> str:
+
+def edit_file(path: str, old_text: str, new_text: str) -> str:
+    """
+    Replace exact text in file.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        old_text (str): Exact text to find and replace
+        new_text (str): Replacement text
+
+    Returns:
+        str: Success or error message
+    """
     try:
         fp = safe_path(path)
         c = fp.read_text()
@@ -161,29 +204,42 @@ def run_edit(path: str, old_text: str, new_text: str) -> str:
         return f"Error: {e}"
 
 
+def background_run(command: str) -> str:
+    """
+    Run command in background thread. Returns task_id immediately.
+
+    Args:
+        command (str): The shell command to run in the background
+
+    Returns:
+        str: The background task ID
+    """
+    return BG.run(command)
+
+
+def check_background(task_id: str = None) -> str:
+    """
+    Check background task status. Omit task_id to list all.
+
+    Args:
+        task_id (str): The background task ID to check
+
+    Returns:
+        str: Status and output of the task
+    """
+    return BG.check(task_id)
+
+
 TOOL_HANDLERS = {
-    "bash":             lambda **kw: run_bash(kw["command"]),
-    "read_file":        lambda **kw: run_read(kw["path"], kw.get("limit")),
-    "write_file":       lambda **kw: run_write(kw["path"], kw["content"]),
-    "edit_file":        lambda **kw: run_edit(kw["path"], kw["old_text"], kw["new_text"]),
-    "background_run":   lambda **kw: BG.run(kw["command"]),
-    "check_background": lambda **kw: BG.check(kw.get("task_id")),
+    "bash":             bash,
+    "read_file":        read_file,
+    "write_file":       write_file,
+    "edit_file":        edit_file,
+    "background_run":   background_run,
+    "check_background": check_background,
 }
 
-TOOLS = [
-    {"type": "function", "function": {"name": "bash", "description": "Run a shell command (blocking).",
-     "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
-    {"type": "function", "function": {"name": "read_file", "description": "Read file contents.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["path"]}}},
-    {"type": "function", "function": {"name": "write_file", "description": "Write content to file.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
-    {"type": "function", "function": {"name": "edit_file", "description": "Replace exact text in file.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, "required": ["path", "old_text", "new_text"]}}},
-    {"type": "function", "function": {"name": "background_run", "description": "Run command in background thread. Returns task_id immediately.",
-     "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
-    {"type": "function", "function": {"name": "check_background", "description": "Check background task status. Omit task_id to list all.",
-     "parameters": {"type": "object", "properties": {"task_id": {"type": "string"}}}}},
-]
+TOOLS = [bash, read_file, write_file, edit_file, background_run, check_background]
 
 
 def agent_loop(messages: list):

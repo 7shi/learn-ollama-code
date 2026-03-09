@@ -79,7 +79,16 @@ def safe_path(p: str) -> Path:
         raise ValueError(f"Path escapes workspace: {p}")
     return path
 
-def run_bash(command: str) -> str:
+def bash(command: str) -> str:
+    """
+    Run a shell command.
+
+    Args:
+        command (str): The shell command to execute
+
+    Returns:
+        str: The output of the command
+    """
     dangerous = ["rm -rf /", "sudo", "shutdown", "reboot", "> /dev/"]
     if any(d in command for d in dangerous):
         return "Error: Dangerous command blocked"
@@ -91,7 +100,17 @@ def run_bash(command: str) -> str:
     except subprocess.TimeoutExpired:
         return "Error: Timeout (120s)"
 
-def run_read(path: str, limit: int = None) -> str:
+def read_file(path: str, limit: int = None) -> str:
+    """
+    Read file contents.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        limit (int): Maximum number of lines to return
+
+    Returns:
+        str: The file contents
+    """
     try:
         lines = safe_path(path).read_text().splitlines()
         if limit and limit < len(lines):
@@ -100,7 +119,17 @@ def run_read(path: str, limit: int = None) -> str:
     except Exception as e:
         return f"Error: {e}"
 
-def run_write(path: str, content: str) -> str:
+def write_file(path: str, content: str) -> str:
+    """
+    Write content to file.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        content (str): Content to write
+
+    Returns:
+        str: Success or error message
+    """
     try:
         fp = safe_path(path)
         fp.parent.mkdir(parents=True, exist_ok=True)
@@ -109,7 +138,18 @@ def run_write(path: str, content: str) -> str:
     except Exception as e:
         return f"Error: {e}"
 
-def run_edit(path: str, old_text: str, new_text: str) -> str:
+def edit_file(path: str, old_text: str, new_text: str) -> str:
+    """
+    Replace exact text in file.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        old_text (str): Exact text to find and replace
+        new_text (str): Replacement text
+
+    Returns:
+        str: Success or error message
+    """
     try:
         fp = safe_path(path)
         c = fp.read_text()
@@ -160,24 +200,14 @@ class TodoManager:
 
 # === SECTION: subagent (s04) ===
 def run_subagent(prompt: str, agent_type: str = "Explore") -> str:
-    sub_tools = [
-        {"type": "function", "function": {"name": "bash", "description": "Run command.",
-         "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
-        {"type": "function", "function": {"name": "read_file", "description": "Read file.",
-         "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}},
-    ]
+    sub_tools = [bash, read_file]
     if agent_type != "Explore":
-        sub_tools += [
-            {"type": "function", "function": {"name": "write_file", "description": "Write file.",
-             "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
-            {"type": "function", "function": {"name": "edit_file", "description": "Edit file.",
-             "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, "required": ["path", "old_text", "new_text"]}}},
-        ]
+        sub_tools += [write_file, edit_file]
     sub_handlers = {
-        "bash": lambda **kw: run_bash(kw["command"]),
-        "read_file": lambda **kw: run_read(kw["path"]),
-        "write_file": lambda **kw: run_write(kw["path"], kw["content"]),
-        "edit_file": lambda **kw: run_edit(kw["path"], kw["old_text"], kw["new_text"]),
+        "bash":       bash,
+        "read_file":  read_file,
+        "write_file": write_file,
+        "edit_file":  edit_file,
     }
     sub_msgs = [
         {"role": "system", "content": f"You are a subagent at {WORKDIR}. Complete the task."},
@@ -447,15 +477,7 @@ class TeammateManager:
             {"role": "system", "content": sys_prompt},
             {"role": "user", "content": prompt},
         ]
-        tools = [
-            {"type": "function", "function": {"name": "bash", "description": "Run command.", "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
-            {"type": "function", "function": {"name": "read_file", "description": "Read file.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}},
-            {"type": "function", "function": {"name": "write_file", "description": "Write file.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
-            {"type": "function", "function": {"name": "edit_file", "description": "Edit file.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, "required": ["path", "old_text", "new_text"]}}},
-            {"type": "function", "function": {"name": "send_message", "description": "Send message.", "parameters": {"type": "object", "properties": {"to": {"type": "string"}, "content": {"type": "string"}}, "required": ["to", "content"]}}},
-            {"type": "function", "function": {"name": "idle", "description": "Signal no more work.", "parameters": {"type": "object", "properties": {}}}},
-            {"type": "function", "function": {"name": "claim_task", "description": "Claim task by ID.", "parameters": {"type": "object", "properties": {"task_id": {"type": "integer"}}, "required": ["task_id"]}}},
-        ]
+        tools = [bash, read_file, write_file, edit_file, SEND_MESSAGE_TOOL, idle, claim_task]
         while True:
             # -- WORK PHASE --
             for _ in range(50):
@@ -483,10 +505,8 @@ class TeammateManager:
                     elif tool.function.name == "send_message":
                         output = self.bus.send(name, tool.function.arguments["to"], tool.function.arguments["content"])
                     else:
-                        dispatch = {"bash": lambda **kw: run_bash(kw["command"]),
-                                    "read_file": lambda **kw: run_read(kw["path"]),
-                                    "write_file": lambda **kw: run_write(kw["path"], kw["content"]),
-                                    "edit_file": lambda **kw: run_edit(kw["path"], kw["old_text"], kw["new_text"])}
+                        dispatch = {"bash": bash, "read_file": read_file,
+                                    "write_file": write_file, "edit_file": edit_file}
                         output = dispatch.get(tool.function.name, lambda **kw: "Unknown")(**tool.function.arguments)
                     print(f"  [{name}] {tool.function.name}: {str(output)[:120]}")
                     messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
@@ -555,15 +575,170 @@ Use task for subagent delegation. Use load_skill for specialized knowledge.
 Skills: {SKILLS.descriptions()}"""
 
 
+# === SECTION: tool_functions ===
+def load_skill(name: str) -> str:
+    """
+    Load specialized knowledge by name.
+
+    Args:
+        name (str): The skill name to load
+
+    Returns:
+        str: The skill content
+    """
+    return SKILLS.load(name)
+
+def compress(focus: str = ""):
+    """Trigger manual conversation compression to free up context."""
+
+def background_run(command: str, timeout: int = 120) -> str:
+    """
+    Run a shell command in a background thread.
+
+    Args:
+        command (str): The shell command to execute
+        timeout (int): Timeout in seconds
+
+    Returns:
+        str: Background task ID and status
+    """
+    return BG.run(command, timeout)
+
+def check_background(task_id: str = None) -> str:
+    """
+    Check background task status.
+
+    Args:
+        task_id (str): Specific task ID to check, or omit for all tasks
+
+    Returns:
+        str: Task status and result
+    """
+    return BG.check(task_id)
+
+def task_create(subject: str, description: str = "") -> str:
+    """
+    Create a persistent file task.
+
+    Args:
+        subject (str): Short task title
+        description (str): Detailed task description
+
+    Returns:
+        str: The created task as JSON
+    """
+    return TASK_MGR.create(subject, description)
+
+def task_get(task_id: int) -> str:
+    """
+    Get task details by ID.
+
+    Args:
+        task_id (int): The task ID to retrieve
+
+    Returns:
+        str: Task details as JSON
+    """
+    return TASK_MGR.get(task_id)
+
+def task_list() -> str:
+    """
+    List all tasks.
+
+    Returns:
+        str: Formatted list of all tasks
+    """
+    return TASK_MGR.list_all()
+
+def spawn_teammate(name: str, role: str, prompt: str) -> str:
+    """
+    Spawn a persistent autonomous teammate.
+
+    Args:
+        name (str): Unique teammate name
+        role (str): Role description
+        prompt (str): Initial task prompt
+
+    Returns:
+        str: Confirmation message
+    """
+    return TEAM.spawn(name, role, prompt)
+
+def list_teammates() -> str:
+    """
+    List all teammates and their status.
+
+    Returns:
+        str: Formatted team roster
+    """
+    return TEAM.list_all()
+
+def read_inbox() -> str:
+    """
+    Read and drain the lead's inbox.
+
+    Returns:
+        str: Inbox messages as JSON
+    """
+    return json.dumps(BUS.read_inbox("lead"), indent=2, ensure_ascii=False)
+
+def broadcast(content: str) -> str:
+    """
+    Send a message to all teammates.
+
+    Args:
+        content (str): Message to broadcast
+
+    Returns:
+        str: Confirmation with count
+    """
+    return BUS.broadcast("lead", content, TEAM.member_names())
+
+def idle():
+    """Enter idle state when there is no more work to do."""
+
+def claim_task(task_id: int) -> str:
+    """
+    Claim a task from the board.
+
+    Args:
+        task_id (int): The task ID to claim
+
+    Returns:
+        str: Confirmation message
+    """
+    return TASK_MGR.claim(task_id, "lead")
+
+
 # === SECTION: shutdown_protocol (s10) ===
-def handle_shutdown_request(teammate: str) -> str:
+def shutdown_request(teammate: str) -> str:
+    """
+    Request a teammate to shut down.
+
+    Args:
+        teammate (str): Name of the teammate to shut down
+
+    Returns:
+        str: Confirmation with request ID
+    """
     req_id = str(uuid.uuid4())[:8]
     shutdown_requests[req_id] = {"target": teammate, "status": "pending"}
     BUS.send("lead", teammate, "Please shut down.", "shutdown_request", {"request_id": req_id})
     return f"Shutdown request {req_id} sent to '{teammate}'"
 
 # === SECTION: plan_approval (s10) ===
-def handle_plan_review(request_id: str, approve: bool, feedback: str = "") -> str:
+def plan_approval(request_id: str, approve: bool, feedback: str = "") -> str:
+    """
+    Approve or reject a teammate's plan.
+
+    Args:
+        request_id (str): The plan request ID to respond to
+        approve (bool): Whether to approve the plan
+        feedback (str): Optional feedback message
+
+    Returns:
+        str: Confirmation of the approval decision
+    """
     req = plan_requests.get(request_id)
     if not req: return f"Error: Unknown plan request_id '{request_id}'"
     req["status"] = "approved" if approve else "rejected"
@@ -573,79 +748,117 @@ def handle_plan_review(request_id: str, approve: bool, feedback: str = "") -> st
 
 
 # === SECTION: tool_dispatch (s02) ===
+TODO_WRITE_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "TodoWrite",
+        "description": "Update task tracking list.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "content":    {"type": "string"},
+                            "status":     {"type": "string", "enum": ["pending", "in_progress", "completed"]},
+                            "activeForm": {"type": "string"},
+                        },
+                        "required": ["content", "status", "activeForm"],
+                    },
+                },
+            },
+            "required": ["items"],
+        },
+    },
+}
+
+TASK_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "task",
+        "description": "Spawn a subagent for isolated exploration or work.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "prompt":     {"type": "string"},
+                "agent_type": {"type": "string", "enum": ["Explore", "general-purpose"]},
+            },
+            "required": ["prompt"],
+        },
+    },
+}
+
+TASK_UPDATE_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "task_update",
+        "description": "Update task status or dependencies.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task_id":       {"type": "integer"},
+                "status":        {"type": "string", "enum": ["pending", "in_progress", "completed", "deleted"]},
+                "add_blocked_by": {"type": "array", "items": {"type": "integer"}},
+                "add_blocks":    {"type": "array", "items": {"type": "integer"}},
+            },
+            "required": ["task_id"],
+        },
+    },
+}
+
+SEND_MESSAGE_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "send_message",
+        "description": "Send a message to a teammate.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "to":       {"type": "string"},
+                "content":  {"type": "string"},
+                "msg_type": {"type": "string", "enum": list(VALID_MSG_TYPES)},
+            },
+            "required": ["to", "content"],
+        },
+    },
+}
+
 TOOL_HANDLERS = {
-    "bash":             lambda **kw: run_bash(kw["command"]),
-    "read_file":        lambda **kw: run_read(kw["path"], kw.get("limit")),
-    "write_file":       lambda **kw: run_write(kw["path"], kw["content"]),
-    "edit_file":        lambda **kw: run_edit(kw["path"], kw["old_text"], kw["new_text"]),
+    "bash":             bash,
+    "read_file":        read_file,
+    "write_file":       write_file,
+    "edit_file":        edit_file,
     "TodoWrite":        lambda **kw: TODO.update(kw["items"]),
     "task":             lambda **kw: run_subagent(kw["prompt"], kw.get("agent_type", "Explore")),
-    "load_skill":       lambda **kw: SKILLS.load(kw["name"]),
+    "load_skill":       load_skill,
     "compress":         lambda **kw: "Compressing...",
-    "background_run":   lambda **kw: BG.run(kw["command"], kw.get("timeout", 120)),
-    "check_background": lambda **kw: BG.check(kw.get("task_id")),
-    "task_create":      lambda **kw: TASK_MGR.create(kw["subject"], kw.get("description", "")),
-    "task_get":         lambda **kw: TASK_MGR.get(kw["task_id"]),
+    "background_run":   background_run,
+    "check_background": check_background,
+    "task_create":      task_create,
+    "task_get":         task_get,
     "task_update":      lambda **kw: TASK_MGR.update(kw["task_id"], kw.get("status"), kw.get("add_blocked_by"), kw.get("add_blocks")),
-    "task_list":        lambda **kw: TASK_MGR.list_all(),
-    "spawn_teammate":   lambda **kw: TEAM.spawn(kw["name"], kw["role"], kw["prompt"]),
-    "list_teammates":   lambda **kw: TEAM.list_all(),
+    "task_list":        task_list,
+    "spawn_teammate":   spawn_teammate,
+    "list_teammates":   list_teammates,
     "send_message":     lambda **kw: BUS.send("lead", kw["to"], kw["content"], kw.get("msg_type", "message")),
-    "read_inbox":       lambda **kw: json.dumps(BUS.read_inbox("lead"), indent=2, ensure_ascii=False),
-    "broadcast":        lambda **kw: BUS.broadcast("lead", kw["content"], TEAM.member_names()),
-    "shutdown_request": lambda **kw: handle_shutdown_request(kw["teammate"]),
-    "plan_approval":    lambda **kw: handle_plan_review(kw["request_id"], kw["approve"], kw.get("feedback", "")),
+    "read_inbox":       read_inbox,
+    "broadcast":        broadcast,
+    "shutdown_request": shutdown_request,
+    "plan_approval":    plan_approval,
     "idle":             lambda **kw: "Lead does not idle.",
-    "claim_task":       lambda **kw: TASK_MGR.claim(kw["task_id"], "lead"),
+    "claim_task":       claim_task,
 }
 
 TOOLS = [
-    {"type": "function", "function": {"name": "bash", "description": "Run a shell command.",
-     "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
-    {"type": "function", "function": {"name": "read_file", "description": "Read file contents.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["path"]}}},
-    {"type": "function", "function": {"name": "write_file", "description": "Write content to file.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
-    {"type": "function", "function": {"name": "edit_file", "description": "Replace exact text in file.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, "required": ["path", "old_text", "new_text"]}}},
-    {"type": "function", "function": {"name": "TodoWrite", "description": "Update task tracking list.",
-     "parameters": {"type": "object", "properties": {"items": {"type": "array", "items": {"type": "object", "properties": {"content": {"type": "string"}, "status": {"type": "string", "enum": ["pending", "in_progress", "completed"]}, "activeForm": {"type": "string"}}, "required": ["content", "status", "activeForm"]}}}, "required": ["items"]}}},
-    {"type": "function", "function": {"name": "task", "description": "Spawn a subagent for isolated exploration or work.",
-     "parameters": {"type": "object", "properties": {"prompt": {"type": "string"}, "agent_type": {"type": "string", "enum": ["Explore", "general-purpose"]}}, "required": ["prompt"]}}},
-    {"type": "function", "function": {"name": "load_skill", "description": "Load specialized knowledge by name.",
-     "parameters": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}}},
-    {"type": "function", "function": {"name": "compress", "description": "Manually compress conversation context.",
-     "parameters": {"type": "object", "properties": {}}}},
-    {"type": "function", "function": {"name": "background_run", "description": "Run command in background thread.",
-     "parameters": {"type": "object", "properties": {"command": {"type": "string"}, "timeout": {"type": "integer"}}, "required": ["command"]}}},
-    {"type": "function", "function": {"name": "check_background", "description": "Check background task status.",
-     "parameters": {"type": "object", "properties": {"task_id": {"type": "string"}}}}},
-    {"type": "function", "function": {"name": "task_create", "description": "Create a persistent file task.",
-     "parameters": {"type": "object", "properties": {"subject": {"type": "string"}, "description": {"type": "string"}}, "required": ["subject"]}}},
-    {"type": "function", "function": {"name": "task_get", "description": "Get task details by ID.",
-     "parameters": {"type": "object", "properties": {"task_id": {"type": "integer"}}, "required": ["task_id"]}}},
-    {"type": "function", "function": {"name": "task_update", "description": "Update task status or dependencies.",
-     "parameters": {"type": "object", "properties": {"task_id": {"type": "integer"}, "status": {"type": "string", "enum": ["pending", "in_progress", "completed", "deleted"]}, "add_blocked_by": {"type": "array", "items": {"type": "integer"}}, "add_blocks": {"type": "array", "items": {"type": "integer"}}}, "required": ["task_id"]}}},
-    {"type": "function", "function": {"name": "task_list", "description": "List all tasks.",
-     "parameters": {"type": "object", "properties": {}}}},
-    {"type": "function", "function": {"name": "spawn_teammate", "description": "Spawn a persistent autonomous teammate.",
-     "parameters": {"type": "object", "properties": {"name": {"type": "string"}, "role": {"type": "string"}, "prompt": {"type": "string"}}, "required": ["name", "role", "prompt"]}}},
-    {"type": "function", "function": {"name": "list_teammates", "description": "List all teammates.",
-     "parameters": {"type": "object", "properties": {}}}},
-    {"type": "function", "function": {"name": "send_message", "description": "Send a message to a teammate.",
-     "parameters": {"type": "object", "properties": {"to": {"type": "string"}, "content": {"type": "string"}, "msg_type": {"type": "string", "enum": list(VALID_MSG_TYPES)}}, "required": ["to", "content"]}}},
-    {"type": "function", "function": {"name": "read_inbox", "description": "Read and drain the lead's inbox.",
-     "parameters": {"type": "object", "properties": {}}}},
-    {"type": "function", "function": {"name": "broadcast", "description": "Send message to all teammates.",
-     "parameters": {"type": "object", "properties": {"content": {"type": "string"}}, "required": ["content"]}}},
-    {"type": "function", "function": {"name": "shutdown_request", "description": "Request a teammate to shut down.",
-     "parameters": {"type": "object", "properties": {"teammate": {"type": "string"}}, "required": ["teammate"]}}},
-    {"type": "function", "function": {"name": "plan_approval", "description": "Approve or reject a teammate's plan.",
-     "parameters": {"type": "object", "properties": {"request_id": {"type": "string"}, "approve": {"type": "boolean"}, "feedback": {"type": "string"}}, "required": ["request_id", "approve"]}}},
-    {"type": "function", "function": {"name": "idle", "description": "Enter idle state.",
-     "parameters": {"type": "object", "properties": {}}}},
-    {"type": "function", "function": {"name": "claim_task", "description": "Claim a task from the board.",
-     "parameters": {"type": "object", "properties": {"task_id": {"type": "integer"}}, "required": ["task_id"]}}},
+    bash, read_file, write_file, edit_file,
+    TODO_WRITE_TOOL,
+    TASK_TOOL,
+    load_skill, compress, background_run, check_background,
+    task_create, task_get, TASK_UPDATE_TOOL, task_list,
+    spawn_teammate, list_teammates, SEND_MESSAGE_TOOL, read_inbox, broadcast,
+    shutdown_request, plan_approval, idle, claim_task,
 ]
 
 

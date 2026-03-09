@@ -200,13 +200,13 @@ class TeammateManager:
     def _exec(self, sender: str, tool_name: str, args: dict) -> str:
         # these base tools are unchanged from s02
         if tool_name == "bash":
-            return _run_bash(args["command"])
+            return bash(args["command"])
         if tool_name == "read_file":
-            return _run_read(args["path"])
+            return read_file(args["path"])
         if tool_name == "write_file":
-            return _run_write(args["path"], args["content"])
+            return write_file(args["path"], args["content"])
         if tool_name == "edit_file":
-            return _run_edit(args["path"], args["old_text"], args["new_text"])
+            return edit_file(args["path"], args["old_text"], args["new_text"])
         if tool_name == "send_message":
             return BUS.send(sender, args["to"], args["content"], args.get("msg_type", "message"))
         if tool_name == "read_inbox":
@@ -214,21 +214,7 @@ class TeammateManager:
         return f"Unknown tool: {tool_name}"
 
     def _teammate_tools(self) -> list:
-        # these base tools are unchanged from s02
-        return [
-            {"type": "function", "function": {"name": "bash", "description": "Run a shell command.",
-             "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
-            {"type": "function", "function": {"name": "read_file", "description": "Read file contents.",
-             "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}},
-            {"type": "function", "function": {"name": "write_file", "description": "Write content to file.",
-             "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
-            {"type": "function", "function": {"name": "edit_file", "description": "Replace exact text in file.",
-             "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, "required": ["path", "old_text", "new_text"]}}},
-            {"type": "function", "function": {"name": "send_message", "description": "Send message to a teammate.",
-             "parameters": {"type": "object", "properties": {"to": {"type": "string"}, "content": {"type": "string"}, "msg_type": {"type": "string", "enum": list(VALID_MSG_TYPES)}}, "required": ["to", "content"]}}},
-            {"type": "function", "function": {"name": "read_inbox", "description": "Read and drain your inbox.",
-             "parameters": {"type": "object", "properties": {}}}},
-        ]
+        return [bash, read_file, write_file, edit_file, SEND_MESSAGE_TOOL, read_inbox]
 
     def list_all(self) -> str:
         if not self.config["members"]:
@@ -246,14 +232,23 @@ TEAM = TeammateManager(TEAM_DIR)
 
 
 # -- Base tool implementations (these base tools are unchanged from s02) --
-def _safe_path(p: str) -> Path:
+def safe_path(p: str) -> Path:
     path = (WORKDIR / p).resolve()
     if not path.is_relative_to(WORKDIR):
         raise ValueError(f"Path escapes workspace: {p}")
     return path
 
 
-def _run_bash(command: str) -> str:
+def bash(command: str) -> str:
+    """
+    Run a shell command.
+
+    Args:
+        command (str): The shell command to execute
+
+    Returns:
+        str: The output of the command
+    """
     dangerous = ["rm -rf /", "sudo", "shutdown", "reboot"]
     if any(d in command for d in dangerous):
         return "Error: Dangerous command blocked"
@@ -268,9 +263,19 @@ def _run_bash(command: str) -> str:
         return "Error: Timeout (120s)"
 
 
-def _run_read(path: str, limit: int = None) -> str:
+def read_file(path: str, limit: int = None) -> str:
+    """
+    Read file contents.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        limit (int): Maximum number of lines to return
+
+    Returns:
+        str: The file contents
+    """
     try:
-        lines = _safe_path(path).read_text().splitlines()
+        lines = safe_path(path).read_text().splitlines()
         if limit and limit < len(lines):
             lines = lines[:limit] + [f"... ({len(lines) - limit} more)"]
         return "\n".join(lines)[:50000]
@@ -278,9 +283,19 @@ def _run_read(path: str, limit: int = None) -> str:
         return f"Error: {e}"
 
 
-def _run_write(path: str, content: str) -> str:
+def write_file(path: str, content: str) -> str:
+    """
+    Write content to file.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        content (str): Content to write
+
+    Returns:
+        str: Success or error message
+    """
     try:
-        fp = _safe_path(path)
+        fp = safe_path(path)
         fp.parent.mkdir(parents=True, exist_ok=True)
         fp.write_text(content)
         return f"Wrote {len(content)} bytes"
@@ -288,9 +303,20 @@ def _run_write(path: str, content: str) -> str:
         return f"Error: {e}"
 
 
-def _run_edit(path: str, old_text: str, new_text: str) -> str:
+def edit_file(path: str, old_text: str, new_text: str) -> str:
+    """
+    Replace exact text in file.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        old_text (str): Exact text to find and replace
+        new_text (str): Replacement text
+
+    Returns:
+        str: Success or error message
+    """
     try:
-        fp = _safe_path(path)
+        fp = safe_path(path)
         c = fp.read_text()
         if old_text not in c:
             return f"Error: Text not found in {path}"
@@ -300,40 +326,79 @@ def _run_edit(path: str, old_text: str, new_text: str) -> str:
         return f"Error: {e}"
 
 
+def read_inbox() -> str:
+    """
+    Read and drain your inbox.
+
+    Returns:
+        str: Inbox messages as JSON
+    """
+    return json.dumps(BUS.read_inbox("lead"), indent=2, ensure_ascii=False)
+
+
+# send_message has msg_type enum that can't be expressed with type hints alone
+SEND_MESSAGE_TOOL = {"type": "function", "function": {"name": "send_message",
+    "description": "Send a message to a teammate's inbox.",
+    "parameters": {"type": "object", "properties": {
+        "to":       {"type": "string"},
+        "content":  {"type": "string"},
+        "msg_type": {"type": "string", "enum": list(VALID_MSG_TYPES)},
+    }, "required": ["to", "content"]}}}
+
+
+def spawn_teammate(name: str, role: str, prompt: str) -> str:
+    """
+    Spawn a persistent teammate that runs in its own thread.
+
+    Args:
+        name (str): Unique name for the teammate
+        role (str): Role description for the teammate
+        prompt (str): Initial task prompt for the teammate
+
+    Returns:
+        str: Confirmation message
+    """
+    return TEAM.spawn(name, role, prompt)
+
+
+def list_teammates() -> str:
+    """
+    List all teammates with name, role, status.
+
+    Returns:
+        str: Team roster
+    """
+    return TEAM.list_all()
+
+
+def broadcast(content: str) -> str:
+    """
+    Send a message to all teammates.
+
+    Args:
+        content (str): Message to broadcast
+
+    Returns:
+        str: Confirmation message
+    """
+    return BUS.broadcast("lead", content, TEAM.member_names())
+
+
 # -- Lead tool dispatch (9 tools) --
 TOOL_HANDLERS = {
-    "bash":            lambda **kw: _run_bash(kw["command"]),
-    "read_file":       lambda **kw: _run_read(kw["path"], kw.get("limit")),
-    "write_file":      lambda **kw: _run_write(kw["path"], kw["content"]),
-    "edit_file":       lambda **kw: _run_edit(kw["path"], kw["old_text"], kw["new_text"]),
-    "spawn_teammate":  lambda **kw: TEAM.spawn(kw["name"], kw["role"], kw["prompt"]),
-    "list_teammates":  lambda **kw: TEAM.list_all(),
+    "bash":            bash,
+    "read_file":       read_file,
+    "write_file":      write_file,
+    "edit_file":       edit_file,
+    "spawn_teammate":  spawn_teammate,
+    "list_teammates":  list_teammates,
     "send_message":    lambda **kw: BUS.send("lead", kw["to"], kw["content"], kw.get("msg_type", "message")),
-    "read_inbox":      lambda **kw: json.dumps(BUS.read_inbox("lead"), indent=2, ensure_ascii=False),
-    "broadcast":       lambda **kw: BUS.broadcast("lead", kw["content"], TEAM.member_names()),
+    "read_inbox":      read_inbox,
+    "broadcast":       broadcast,
 }
 
-# these base tools are unchanged from s02
-TOOLS = [
-    {"type": "function", "function": {"name": "bash", "description": "Run a shell command.",
-     "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
-    {"type": "function", "function": {"name": "read_file", "description": "Read file contents.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["path"]}}},
-    {"type": "function", "function": {"name": "write_file", "description": "Write content to file.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
-    {"type": "function", "function": {"name": "edit_file", "description": "Replace exact text in file.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, "required": ["path", "old_text", "new_text"]}}},
-    {"type": "function", "function": {"name": "spawn_teammate", "description": "Spawn a persistent teammate that runs in its own thread.",
-     "parameters": {"type": "object", "properties": {"name": {"type": "string"}, "role": {"type": "string"}, "prompt": {"type": "string"}}, "required": ["name", "role", "prompt"]}}},
-    {"type": "function", "function": {"name": "list_teammates", "description": "List all teammates with name, role, status.",
-     "parameters": {"type": "object", "properties": {}}}},
-    {"type": "function", "function": {"name": "send_message", "description": "Send a message to a teammate's inbox.",
-     "parameters": {"type": "object", "properties": {"to": {"type": "string"}, "content": {"type": "string"}, "msg_type": {"type": "string", "enum": list(VALID_MSG_TYPES)}}, "required": ["to", "content"]}}},
-    {"type": "function", "function": {"name": "read_inbox", "description": "Read and drain the lead's inbox.",
-     "parameters": {"type": "object", "properties": {}}}},
-    {"type": "function", "function": {"name": "broadcast", "description": "Send a message to all teammates.",
-     "parameters": {"type": "object", "properties": {"content": {"type": "string"}}, "required": ["content"]}}},
-]
+TOOLS = [bash, read_file, write_file, edit_file,
+         spawn_teammate, list_teammates, SEND_MESSAGE_TOOL, read_inbox, broadcast]
 
 
 def agent_loop(messages: list):

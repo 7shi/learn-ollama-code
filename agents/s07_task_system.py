@@ -135,7 +135,16 @@ def safe_path(p: str) -> Path:
         raise ValueError(f"Path escapes workspace: {p}")
     return path
 
-def run_bash(command: str) -> str:
+def bash(command: str) -> str:
+    """
+    Run a shell command.
+
+    Args:
+        command (str): The shell command to execute
+
+    Returns:
+        str: The output of the command
+    """
     dangerous = ["rm -rf /", "sudo", "shutdown", "reboot", "> /dev/"]
     if any(d in command for d in dangerous):
         return "Error: Dangerous command blocked"
@@ -147,7 +156,18 @@ def run_bash(command: str) -> str:
     except subprocess.TimeoutExpired:
         return "Error: Timeout (120s)"
 
-def run_read(path: str, limit: int = None) -> str:
+
+def read_file(path: str, limit: int = None) -> str:
+    """
+    Read file contents.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        limit (int): Maximum number of lines to return
+
+    Returns:
+        str: The file contents
+    """
     try:
         lines = safe_path(path).read_text().splitlines()
         if limit and limit < len(lines):
@@ -156,7 +176,18 @@ def run_read(path: str, limit: int = None) -> str:
     except Exception as e:
         return f"Error: {e}"
 
-def run_write(path: str, content: str) -> str:
+
+def write_file(path: str, content: str) -> str:
+    """
+    Write content to file.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        content (str): Content to write
+
+    Returns:
+        str: Success or error message
+    """
     try:
         fp = safe_path(path)
         fp.parent.mkdir(parents=True, exist_ok=True)
@@ -165,7 +196,19 @@ def run_write(path: str, content: str) -> str:
     except Exception as e:
         return f"Error: {e}"
 
-def run_edit(path: str, old_text: str, new_text: str) -> str:
+
+def edit_file(path: str, old_text: str, new_text: str) -> str:
+    """
+    Replace exact text in file.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        old_text (str): Exact text to find and replace
+        new_text (str): Replacement text
+
+    Returns:
+        str: Success or error message
+    """
     try:
         fp = safe_path(path)
         c = fp.read_text()
@@ -177,35 +220,65 @@ def run_edit(path: str, old_text: str, new_text: str) -> str:
         return f"Error: {e}"
 
 
+def task_create(subject: str, description: str = "") -> str:
+    """
+    Create a new task.
+
+    Args:
+        subject (str): Short title of the task
+        description (str): Detailed description of the task
+
+    Returns:
+        str: The created task as JSON
+    """
+    return TASKS.create(subject, description)
+
+
+def task_list() -> str:
+    """
+    List all tasks with status summary.
+
+    Returns:
+        str: Summary of all tasks
+    """
+    return TASKS.list_all()
+
+
+def task_get(task_id: int) -> str:
+    """
+    Get full details of a task by ID.
+
+    Args:
+        task_id (int): The task ID
+
+    Returns:
+        str: The task as JSON
+    """
+    return TASKS.get(task_id)
+
+
+# task_update has enum + array-of-int params that can't be expressed with type hints alone
+TASK_UPDATE_TOOL = {"type": "function", "function": {"name": "task_update",
+    "description": "Update a task's status or dependencies.",
+    "parameters": {"type": "object", "properties": {
+        "task_id":      {"type": "integer"},
+        "status":       {"type": "string", "enum": ["pending", "in_progress", "completed"]},
+        "addBlockedBy": {"type": "array", "items": {"type": "integer"}},
+        "addBlocks":    {"type": "array", "items": {"type": "integer"}},
+    }, "required": ["task_id"]}}}
+
 TOOL_HANDLERS = {
-    "bash":        lambda **kw: run_bash(kw["command"]),
-    "read_file":   lambda **kw: run_read(kw["path"], kw.get("limit")),
-    "write_file":  lambda **kw: run_write(kw["path"], kw["content"]),
-    "edit_file":   lambda **kw: run_edit(kw["path"], kw["old_text"], kw["new_text"]),
-    "task_create": lambda **kw: TASKS.create(kw["subject"], kw.get("description", "")),
+    "bash":        bash,
+    "read_file":   read_file,
+    "write_file":  write_file,
+    "edit_file":   edit_file,
+    "task_create": task_create,
     "task_update": lambda **kw: TASKS.update(kw["task_id"], kw.get("status"), kw.get("addBlockedBy"), kw.get("addBlocks")),
-    "task_list":   lambda **kw: TASKS.list_all(),
-    "task_get":    lambda **kw: TASKS.get(kw["task_id"]),
+    "task_list":   task_list,
+    "task_get":    task_get,
 }
 
-TOOLS = [
-    {"type": "function", "function": {"name": "bash", "description": "Run a shell command.",
-     "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
-    {"type": "function", "function": {"name": "read_file", "description": "Read file contents.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["path"]}}},
-    {"type": "function", "function": {"name": "write_file", "description": "Write content to file.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
-    {"type": "function", "function": {"name": "edit_file", "description": "Replace exact text in file.",
-     "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, "required": ["path", "old_text", "new_text"]}}},
-    {"type": "function", "function": {"name": "task_create", "description": "Create a new task.",
-     "parameters": {"type": "object", "properties": {"subject": {"type": "string"}, "description": {"type": "string"}}, "required": ["subject"]}}},
-    {"type": "function", "function": {"name": "task_update", "description": "Update a task's status or dependencies.",
-     "parameters": {"type": "object", "properties": {"task_id": {"type": "integer"}, "status": {"type": "string", "enum": ["pending", "in_progress", "completed"]}, "addBlockedBy": {"type": "array", "items": {"type": "integer"}}, "addBlocks": {"type": "array", "items": {"type": "integer"}}}, "required": ["task_id"]}}},
-    {"type": "function", "function": {"name": "task_list", "description": "List all tasks with status summary.",
-     "parameters": {"type": "object", "properties": {}}}},
-    {"type": "function", "function": {"name": "task_get", "description": "Get full details of a task by ID.",
-     "parameters": {"type": "object", "properties": {"task_id": {"type": "integer"}}, "required": ["task_id"]}}},
-]
+TOOLS = [bash, read_file, write_file, edit_file, task_create, TASK_UPDATE_TOOL, task_list, task_get]
 
 
 def agent_loop(messages: list):

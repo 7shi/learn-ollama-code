@@ -483,18 +483,23 @@ def safe_path(p: str) -> Path:
     return path
 
 
-def run_bash(command: str) -> str:
+def bash(command: str) -> str:
+    """
+    Run a shell command in the current workspace (blocking).
+
+    Args:
+        command (str): The shell command to execute
+
+    Returns:
+        str: The output of the command
+    """
     dangerous = ["rm -rf /", "sudo", "shutdown", "reboot", "> /dev/"]
     if any(d in command for d in dangerous):
         return "Error: Dangerous command blocked"
     try:
         r = subprocess.run(
-            command,
-            shell=True,
-            cwd=WORKDIR,
-            capture_output=True,
-            text=True,
-            timeout=120,
+            command, shell=True, cwd=WORKDIR,
+            capture_output=True, text=True, timeout=120,
         )
         out = (r.stdout + r.stderr).strip()
         return out[:50000] if out else "(no output)"
@@ -502,7 +507,17 @@ def run_bash(command: str) -> str:
         return "Error: Timeout (120s)"
 
 
-def run_read(path: str, limit: int = None) -> str:
+def read_file(path: str, limit: int = None) -> str:
+    """
+    Read file contents.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        limit (int): Maximum number of lines to return
+
+    Returns:
+        str: The file contents
+    """
     try:
         lines = safe_path(path).read_text().splitlines()
         if limit and limit < len(lines):
@@ -512,7 +527,17 @@ def run_read(path: str, limit: int = None) -> str:
         return f"Error: {e}"
 
 
-def run_write(path: str, content: str) -> str:
+def write_file(path: str, content: str) -> str:
+    """
+    Write content to file.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        content (str): Content to write
+
+    Returns:
+        str: Success or error message
+    """
     try:
         fp = safe_path(path)
         fp.parent.mkdir(parents=True, exist_ok=True)
@@ -522,7 +547,18 @@ def run_write(path: str, content: str) -> str:
         return f"Error: {e}"
 
 
-def run_edit(path: str, old_text: str, new_text: str) -> str:
+def edit_file(path: str, old_text: str, new_text: str) -> str:
+    """
+    Replace exact text in file.
+
+    Args:
+        path (str): Path to the file relative to workspace
+        old_text (str): Exact text to find and replace
+        new_text (str): Replacement text
+
+    Returns:
+        str: Success or error message
+    """
     try:
         fp = safe_path(path)
         c = fp.read_text()
@@ -534,107 +570,185 @@ def run_edit(path: str, old_text: str, new_text: str) -> str:
         return f"Error: {e}"
 
 
+def task_create(subject: str, description: str = "") -> str:
+    """
+    Create a new task on the shared task board.
+
+    Args:
+        subject (str): Short title of the task
+        description (str): Detailed description of the task
+
+    Returns:
+        str: The created task as JSON
+    """
+    return TASKS.create(subject, description)
+
+
+def task_list() -> str:
+    """
+    List all tasks with status, owner, and worktree binding.
+
+    Returns:
+        str: Summary of all tasks
+    """
+    return TASKS.list_all()
+
+
+def task_get(task_id: int) -> str:
+    """
+    Get task details by ID.
+
+    Args:
+        task_id (int): The task ID
+
+    Returns:
+        str: The task as JSON
+    """
+    return TASKS.get(task_id)
+
+
+def task_bind_worktree(task_id: int, worktree: str, owner: str = "") -> str:
+    """
+    Bind a task to a worktree name.
+
+    Args:
+        task_id (int): The task ID
+        worktree (str): The worktree name to bind
+        owner (str): Optional owner name
+
+    Returns:
+        str: The updated task as JSON
+    """
+    return TASKS.bind_worktree(task_id, worktree, owner)
+
+
+def worktree_create(name: str, task_id: int = None, base_ref: str = "HEAD") -> str:
+    """
+    Create a git worktree and optionally bind it to a task.
+
+    Args:
+        name (str): Worktree name (letters, numbers, ., _, -)
+        task_id (int): Optional task ID to bind
+        base_ref (str): Git ref to branch from
+
+    Returns:
+        str: The created worktree entry as JSON
+    """
+    return WORKTREES.create(name, task_id, base_ref)
+
+
+def worktree_list() -> str:
+    """
+    List worktrees tracked in .worktrees/index.json.
+
+    Returns:
+        str: All worktrees with status and bindings
+    """
+    return WORKTREES.list_all()
+
+
+def worktree_status(name: str) -> str:
+    """
+    Show git status for one worktree.
+
+    Args:
+        name (str): The worktree name
+
+    Returns:
+        str: Git status output
+    """
+    return WORKTREES.status(name)
+
+
+def worktree_run(name: str, command: str) -> str:
+    """
+    Run a shell command in a named worktree directory.
+
+    Args:
+        name (str): The worktree name
+        command (str): The shell command to execute
+
+    Returns:
+        str: The output of the command
+    """
+    return WORKTREES.run(name, command)
+
+
+def worktree_keep(name: str) -> str:
+    """
+    Mark a worktree as kept in lifecycle state without removing it.
+
+    Args:
+        name (str): The worktree name
+
+    Returns:
+        str: The updated worktree entry as JSON
+    """
+    return WORKTREES.keep(name)
+
+
+def worktree_remove(name: str, force: bool = False, complete_task: bool = False) -> str:
+    """
+    Remove a worktree and optionally mark its bound task completed.
+
+    Args:
+        name (str): The worktree name
+        force (bool): Force removal even with uncommitted changes
+        complete_task (bool): Mark the bound task as completed
+
+    Returns:
+        str: Confirmation message
+    """
+    return WORKTREES.remove(name, force, complete_task)
+
+
+def worktree_events(limit: int = 20) -> str:
+    """
+    List recent worktree/task lifecycle events from .worktrees/events.jsonl.
+
+    Args:
+        limit (int): Number of recent events to return
+
+    Returns:
+        str: Events as JSON
+    """
+    return EVENTS.list_recent(limit)
+
+
+# task_update has status enum that can't be expressed with type hints alone
+TASK_UPDATE_TOOL = {"type": "function", "function": {
+    "name": "task_update",
+    "description": "Update task status or owner.",
+    "parameters": {"type": "object", "properties": {
+        "task_id": {"type": "integer"},
+        "status":  {"type": "string", "enum": ["pending", "in_progress", "completed"]},
+        "owner":   {"type": "string"},
+    }, "required": ["task_id"]},
+}}
+
 TOOL_HANDLERS = {
-    "bash": lambda **kw: run_bash(kw["command"]),
-    "read_file": lambda **kw: run_read(kw["path"], kw.get("limit")),
-    "write_file": lambda **kw: run_write(kw["path"], kw["content"]),
-    "edit_file": lambda **kw: run_edit(kw["path"], kw["old_text"], kw["new_text"]),
-    "task_create": lambda **kw: TASKS.create(kw["subject"], kw.get("description", "")),
-    "task_list": lambda **kw: TASKS.list_all(),
-    "task_get": lambda **kw: TASKS.get(kw["task_id"]),
-    "task_update": lambda **kw: TASKS.update(kw["task_id"], kw.get("status"), kw.get("owner")),
-    "task_bind_worktree": lambda **kw: TASKS.bind_worktree(kw["task_id"], kw["worktree"], kw.get("owner", "")),
-    "worktree_create": lambda **kw: WORKTREES.create(kw["name"], kw.get("task_id"), kw.get("base_ref", "HEAD")),
-    "worktree_list": lambda **kw: WORKTREES.list_all(),
-    "worktree_status": lambda **kw: WORKTREES.status(kw["name"]),
-    "worktree_run": lambda **kw: WORKTREES.run(kw["name"], kw["command"]),
-    "worktree_keep": lambda **kw: WORKTREES.keep(kw["name"]),
-    "worktree_remove": lambda **kw: WORKTREES.remove(kw["name"], kw.get("force", False), kw.get("complete_task", False)),
-    "worktree_events": lambda **kw: EVENTS.list_recent(kw.get("limit", 20)),
+    "bash":               bash,
+    "read_file":          read_file,
+    "write_file":         write_file,
+    "edit_file":          edit_file,
+    "task_create":        task_create,
+    "task_list":          task_list,
+    "task_get":           task_get,
+    "task_update":        lambda **kw: TASKS.update(kw["task_id"], kw.get("status"), kw.get("owner")),
+    "task_bind_worktree": task_bind_worktree,
+    "worktree_create":    worktree_create,
+    "worktree_list":      worktree_list,
+    "worktree_status":    worktree_status,
+    "worktree_run":       worktree_run,
+    "worktree_keep":      worktree_keep,
+    "worktree_remove":    worktree_remove,
+    "worktree_events":    worktree_events,
 }
 
-TOOLS = [
-    {"type": "function", "function": {
-        "name": "bash",
-        "description": "Run a shell command in the current workspace (blocking).",
-        "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]},
-    }},
-    {"type": "function", "function": {
-        "name": "read_file",
-        "description": "Read file contents.",
-        "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["path"]},
-    }},
-    {"type": "function", "function": {
-        "name": "write_file",
-        "description": "Write content to file.",
-        "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]},
-    }},
-    {"type": "function", "function": {
-        "name": "edit_file",
-        "description": "Replace exact text in file.",
-        "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, "required": ["path", "old_text", "new_text"]},
-    }},
-    {"type": "function", "function": {
-        "name": "task_create",
-        "description": "Create a new task on the shared task board.",
-        "parameters": {"type": "object", "properties": {"subject": {"type": "string"}, "description": {"type": "string"}}, "required": ["subject"]},
-    }},
-    {"type": "function", "function": {
-        "name": "task_list",
-        "description": "List all tasks with status, owner, and worktree binding.",
-        "parameters": {"type": "object", "properties": {}},
-    }},
-    {"type": "function", "function": {
-        "name": "task_get",
-        "description": "Get task details by ID.",
-        "parameters": {"type": "object", "properties": {"task_id": {"type": "integer"}}, "required": ["task_id"]},
-    }},
-    {"type": "function", "function": {
-        "name": "task_update",
-        "description": "Update task status or owner.",
-        "parameters": {"type": "object", "properties": {"task_id": {"type": "integer"}, "status": {"type": "string", "enum": ["pending", "in_progress", "completed"]}, "owner": {"type": "string"}}, "required": ["task_id"]},
-    }},
-    {"type": "function", "function": {
-        "name": "task_bind_worktree",
-        "description": "Bind a task to a worktree name.",
-        "parameters": {"type": "object", "properties": {"task_id": {"type": "integer"}, "worktree": {"type": "string"}, "owner": {"type": "string"}}, "required": ["task_id", "worktree"]},
-    }},
-    {"type": "function", "function": {
-        "name": "worktree_create",
-        "description": "Create a git worktree and optionally bind it to a task.",
-        "parameters": {"type": "object", "properties": {"name": {"type": "string"}, "task_id": {"type": "integer"}, "base_ref": {"type": "string"}}, "required": ["name"]},
-    }},
-    {"type": "function", "function": {
-        "name": "worktree_list",
-        "description": "List worktrees tracked in .worktrees/index.json.",
-        "parameters": {"type": "object", "properties": {}},
-    }},
-    {"type": "function", "function": {
-        "name": "worktree_status",
-        "description": "Show git status for one worktree.",
-        "parameters": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]},
-    }},
-    {"type": "function", "function": {
-        "name": "worktree_run",
-        "description": "Run a shell command in a named worktree directory.",
-        "parameters": {"type": "object", "properties": {"name": {"type": "string"}, "command": {"type": "string"}}, "required": ["name", "command"]},
-    }},
-    {"type": "function", "function": {
-        "name": "worktree_remove",
-        "description": "Remove a worktree and optionally mark its bound task completed.",
-        "parameters": {"type": "object", "properties": {"name": {"type": "string"}, "force": {"type": "boolean"}, "complete_task": {"type": "boolean"}}, "required": ["name"]},
-    }},
-    {"type": "function", "function": {
-        "name": "worktree_keep",
-        "description": "Mark a worktree as kept in lifecycle state without removing it.",
-        "parameters": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]},
-    }},
-    {"type": "function", "function": {
-        "name": "worktree_events",
-        "description": "List recent worktree/task lifecycle events from .worktrees/events.jsonl.",
-        "parameters": {"type": "object", "properties": {"limit": {"type": "integer"}}},
-    }},
-]
+TOOLS = [bash, read_file, write_file, edit_file,
+         task_create, task_list, task_get, TASK_UPDATE_TOOL, task_bind_worktree,
+         worktree_create, worktree_list, worktree_status, worktree_run,
+         worktree_keep, worktree_remove, worktree_events]
 
 
 def agent_loop(messages: list):

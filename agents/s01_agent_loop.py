@@ -41,21 +41,16 @@ THINK = os.environ.get("THINK") == "1"
 
 SYSTEM = f"You are a coding agent at {os.getcwd()}. Use bash to solve tasks. Act, don't explain."
 
-TOOLS = [{
-    "type": "function",
-    "function": {
-        "name": "bash",
-        "description": "Run a shell command.",
-        "parameters": {
-            "type": "object",
-            "properties": {"command": {"type": "string"}},
-            "required": ["command"],
-        },
-    },
-}]
+def bash(command: str) -> str:
+    """
+    Run a shell command.
 
+    Args:
+        command (str): The shell command to execute
 
-def run_bash(command: str) -> str:
+    Returns:
+        str: The output of the command
+    """
     dangerous = ["rm -rf /", "sudo", "shutdown", "reboot", "> /dev/"]
     if any(d in command for d in dangerous):
         return "Error: Dangerous command blocked"
@@ -66,6 +61,9 @@ def run_bash(command: str) -> str:
         return out[:50000] if out else "(no output)"
     except subprocess.TimeoutExpired:
         return "Error: Timeout (120s)"
+
+
+TOOLS = [bash]
 
 
 # -- The core pattern: a while loop that calls tools until the model stops --
@@ -82,7 +80,7 @@ def agent_loop(messages: list):
         # Execute each tool call
         for tool in response.message.tool_calls:
             print(f"\033[33m$ {tool.function.arguments['command']}\033[0m")
-            output = run_bash(tool.function.arguments["command"])
+            output = bash(tool.function.arguments["command"])
             print(output[:200])
             messages.append({"role": "tool", "content": output,
                              "tool_name": tool.function.name})

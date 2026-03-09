@@ -99,8 +99,8 @@ uv run agents/s10_team_protocols.py
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):
 
-1. `Spawn alice as a coder. Then request her shutdown.`
-2. `List teammates to see alice's status after shutdown approval`
-3. `Spawn bob with a risky refactoring task. Review and reject his plan.`
-4. `Spawn charlie, have him submit a plan, then approve it.`
+1. `将 alice 生成为 coder，然后请求其关闭`
+2. `列出队友以查看关闭批准后 alice 的状态`
+3. `用危险的重构任务生成 bob，审查并拒绝其计划`
+4. `生成 charlie，让其提交计划，然后批准`
 5. 输入 `/team` 监控状态

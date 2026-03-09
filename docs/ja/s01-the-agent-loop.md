@@ -99,7 +99,7 @@ cd learn-ollama-code
 uv run agents/s01_agent_loop.py
 ```
 
-1. `Create a file called hello.py that prints "Hello, World!"`
-2. `List all Python files in this directory`
-3. `What is the current git branch?`
-4. `Create a directory called test_output and write 3 files in it`
+1. `"Hello, World!"を出力するhello.pyというファイルを作成する`
+2. `このディレクトリにあるすべてのPythonファイルを一覧表示する`
+3. `現在のgitブランチは何か？`
+4. `test_outputというディレクトリを作成し、その中に3つのファイルを書き込む`

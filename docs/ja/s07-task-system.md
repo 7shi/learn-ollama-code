@@ -119,7 +119,7 @@ cd learn-ollama-code
 uv run agents/s07_task_system.py
 ```
 
-1. `Create 3 tasks: "Setup project", "Write code", "Write tests". Make them depend on each other in order.`
-2. `List all tasks and show the dependency graph`
-3. `Complete task 1 and then list tasks to see task 2 unblocked`
-4. `Create a task board for refactoring: parse -> transform -> emit -> test, where transform and emit can run in parallel after parse`
+1. `「Setup project」「Write code」「Write tests」の3つのタスクを作成し、この順に依存関係を持たせる`
+2. `すべてのタスクを一覧表示し、依存グラフを表示する`
+3. `タスク1を完了し、タスク2がブロック解除されたことを確認するためにタスクを一覧表示する`
+4. `リファクタリング用タスクボードを作成する: parse -> transform -> emit -> test、transformとemitはparse後に並列実行可能`

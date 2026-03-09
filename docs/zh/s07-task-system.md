@@ -121,7 +121,7 @@ uv run agents/s07_task_system.py
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):
 
-1. `Create 3 tasks: "Setup project", "Write code", "Write tests". Make them depend on each other in order.`
-2. `List all tasks and show the dependency graph`
-3. `Complete task 1 and then list tasks to see task 2 unblocked`
-4. `Create a task board for refactoring: parse -> transform -> emit -> test, where transform and emit can run in parallel after parse`
+1. `创建 3 个任务："Setup project"、"Write code"、"Write tests"，按顺序设置依赖关系`
+2. `列出所有任务并显示依赖图`
+3. `完成任务 1，然后列出任务以查看任务 2 已解除阻塞`
+4. `为重构创建任务看板：parse -> transform -> emit -> test，其中 transform 和 emit 可在 parse 后并行运行`

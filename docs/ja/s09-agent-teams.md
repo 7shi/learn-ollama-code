@@ -120,8 +120,8 @@ cd learn-ollama-code
 uv run agents/s09_agent_teams.py
 ```
 
-1. `Spawn alice (coder) and bob (tester). Have alice send bob a message.`
-2. `Broadcast "status update: phase 1 complete" to all teammates`
-3. `Check the lead inbox for any messages`
+1. `aliceをcoder、bobをtesterとしてspawnする。aliceにbobへメッセージを送らせる。`
+2. `「status update: phase 1 complete」をすべてのチームメンバーにブロードキャストする`
+3. `リードのインボックスにメッセージがないか確認する`
 4. `/team`と入力してステータス付きのチーム名簿を確認する
 5. `/inbox`と入力してリーダーのインボックスを手動確認する

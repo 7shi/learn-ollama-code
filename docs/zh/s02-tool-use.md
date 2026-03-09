@@ -91,7 +91,7 @@ uv run agents/s02_tool_use.py
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):
 
-1. `Read the file pyproject.toml`
-2. `Create a file called greet.py with a greet(name) function`
-3. `Edit greet.py to add a docstring to the function`
-4. `Read greet.py to verify the edit worked`
+1. `读取 pyproject.toml 文件`
+2. `创建一个名为 greet.py 的文件，包含 greet(name) 函数`
+3. `编辑 greet.py，为函数添加 docstring`
+4. `读取 greet.py 以验证编辑是否成功`

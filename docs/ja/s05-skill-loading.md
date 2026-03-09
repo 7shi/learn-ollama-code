@@ -104,7 +104,7 @@ cd learn-ollama-code
 uv run agents/s05_skill_loading.py
 ```
 
-1. `What skills are available?`
-2. `Load the agent-builder skill and follow its instructions`
-3. `I need to do a code review -- load the relevant skill first`
-4. `Build an MCP server using the mcp-builder skill`
+1. `利用可能なスキルは何か？`
+2. `agent-builderスキルを読み込み、その指示に従う`
+3. `コードレビューを行う必要がある -- まず関連するスキルを読み込む`
+4. `mcp-builderスキルを使ってMCPサーバーを構築する`

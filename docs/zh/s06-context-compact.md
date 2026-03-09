@@ -122,6 +122,6 @@ uv run agents/s06_context_compact.py
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):
 
-1. `Read every Python file in the agents/ directory one by one` (观察 micro-compact 替换旧结果)
-2. `Keep reading files until compression triggers automatically`
-3. `Use the compact tool to manually compress the conversation`
+1. `逐一读取 agents/ 目录中的每个 Python 文件` (观察 micro-compact 替换旧结果)
+2. `持续读取文件直到压缩自动触发`
+3. `使用 compact 工具手动压缩对话`

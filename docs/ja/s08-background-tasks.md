@@ -104,6 +104,6 @@ cd learn-ollama-code
 uv run agents/s08_background_tasks.py
 ```
 
-1. `Run "sleep 5 && echo done" in the background, then create a file while it runs`
-2. `Start 3 background tasks: "sleep 2", "sleep 4", "sleep 6". Check their status.`
-3. `Run pytest in the background and keep working on other things`
+1. `「sleep 5 && echo done」をバックグラウンドで実行し、実行中にファイルを作成する`
+2. `「sleep 2」「sleep 4」「sleep 6」の3つのバックグラウンドタスクを開始し、ステータスを確認する`
+3. `pytestをバックグラウンドで実行し、他の作業を続ける`

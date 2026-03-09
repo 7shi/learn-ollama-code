@@ -101,7 +101,7 @@ uv run agents/s01_agent_loop.py
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):
 
-1. `Create a file called hello.py that prints "Hello, World!"`
-2. `List all Python files in this directory`
-3. `What is the current git branch?`
-4. `Create a directory called test_output and write 3 files in it`
+1. `创建一个名为 hello.py 的文件，打印 "Hello, World!"`
+2. `列出此目录中的所有 Python 文件`
+3. `当前的 git 分支是什么？`
+4. `创建一个名为 test_output 的目录，并在其中写入 3 个文件`

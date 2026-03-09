@@ -120,6 +120,6 @@ cd learn-ollama-code
 uv run agents/s06_context_compact.py
 ```
 
-1. `Read every Python file in the agents/ directory one by one` (micro-compactが古い結果を置換するのを観察する)
-2. `Keep reading files until compression triggers automatically`
-3. `Use the compact tool to manually compress the conversation`
+1. `agents/ディレクトリ内のすべてのPythonファイルを一つずつ読む` (micro-compactが古い結果を置換するのを観察する)
+2. `圧縮が自動的にトリガーされるまでファイルを読み続ける`
+3. `compactツールを使って会話を手動で圧縮する`

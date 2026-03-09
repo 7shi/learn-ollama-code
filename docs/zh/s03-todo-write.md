@@ -89,6 +89,6 @@ uv run agents/s03_todo_write.py
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):
 
-1. `Refactor the file hello.py: add type hints, docstrings, and a main guard`
-2. `Create a Python package with __init__.py, utils.py, and tests/test_utils.py`
-3. `Review all Python files and fix any style issues`
+1. `重构 hello.py：添加类型提示、docstring 和 main 守护`
+2. `创建一个包含 __init__.py、utils.py 和 tests/test_utils.py 的 Python 包`
+3. `审查所有 Python 文件并修复样式问题`

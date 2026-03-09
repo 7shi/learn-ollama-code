@@ -97,8 +97,8 @@ cd learn-ollama-code
 uv run agents/s10_team_protocols.py
 ```
 
-1. `Spawn alice as a coder. Then request her shutdown.`
-2. `List teammates to see alice's status after shutdown approval`
-3. `Spawn bob with a risky refactoring task. Review and reject his plan.`
-4. `Spawn charlie, have him submit a plan, then approve it.`
+1. `aliceをcoderとしてspawnする。その後、シャットダウンをリクエストする。`
+2. `チームメンバーを一覧表示し、シャットダウン承認後のaliceのステータスを確認する`
+3. `bobを危険なリファクタリングタスクでspawnする。彼のプランをレビューし、拒否する。`
+4. `charlieをspawnし、プランを提出させてから承認する。`
 5. `/team`と入力してステータスを監視する

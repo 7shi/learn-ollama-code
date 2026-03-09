@@ -106,7 +106,7 @@ uv run agents/s05_skill_loading.py
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):
 
-1. `What skills are available?`
-2. `Load the agent-builder skill and follow its instructions`
-3. `I need to do a code review -- load the relevant skill first`
-4. `Build an MCP server using the mcp-builder skill`
+1. `有哪些可用的技能？`
+2. `加载 agent-builder 技能并按其指示操作`
+3. `我需要进行代码审查——请先加载相关技能`
+4. `使用 mcp-builder 技能构建 MCP 服务器`

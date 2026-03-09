@@ -143,8 +143,8 @@ cd learn-ollama-code
 uv run agents/s11_autonomous_agents.py
 ```
 
-1. `Create 3 tasks on the board, then spawn alice and bob. Watch them auto-claim.`
-2. `Spawn a coder teammate and let it find work from the task board itself`
-3. `Create tasks with dependencies. Watch teammates respect the blocked order.`
+1. `ボードに3つのタスクを作成し、aliceとbobをspawnする。自動クレームを観察する。`
+2. `coderチームメンバーをspawnし、タスクボードから自分で作業を探させる`
+3. `依存関係のあるタスクを作成する。チームメンバーがブロック順序を守るのを観察する。`
 4. `/tasks`と入力してオーナー付きのタスクボードを確認する
 5. `/team`と入力して誰が作業中でアイドルかを監視する

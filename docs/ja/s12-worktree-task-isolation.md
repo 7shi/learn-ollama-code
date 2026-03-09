@@ -112,8 +112,8 @@ cd learn-ollama-code
 uv run agents/s12_worktree_task_isolation.py
 ```
 
-1. `Create tasks for backend auth and frontend login page, then list tasks.`
-2. `Create worktree "auth-refactor" for task 1, then bind task 2 to a new worktree "ui-login".`
-3. `Run "git status --short" in worktree "auth-refactor".`
-4. `Keep worktree "ui-login", then list worktrees and inspect events.`
-5. `Remove worktree "auth-refactor" with complete_task=true, then list tasks/worktrees/events.`
+1. `バックエンド認証とフロントエンドログインページのタスクを作成し、タスクを一覧表示する。`
+2. `タスク1用にworktree「auth-refactor」を作成し、タスク2を新しいworktree「ui-login」にバインドする。`
+3. `worktree「auth-refactor」で「git status --short」を実行する。`
+4. `worktree「ui-login」をkeepし、worktreeを一覧表示してイベントを確認する。`
+5. `complete_task=trueで「auth-refactor」のworktreeを削除し、タスク/worktree/イベントを一覧表示する。`

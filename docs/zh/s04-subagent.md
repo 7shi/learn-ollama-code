@@ -87,6 +87,6 @@ uv run agents/s04_subagent.py
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):
 
-1. `Use a subtask to find what testing framework this project uses`
-2. `Delegate: read all .py files and summarize what each one does`
-3. `Use a task to create a new module, then verify it from here`
+1. `使用子任务查找此项目使用的测试框架`
+2. `委托：读取所有 .py 文件并总结每个文件的功能`
+3. `使用任务创建新模块，然后从这里验证`

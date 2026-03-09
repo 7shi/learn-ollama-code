@@ -85,6 +85,6 @@ cd learn-ollama-code
 uv run agents/s04_subagent.py
 ```
 
-1. `Use a subtask to find what testing framework this project uses`
-2. `Delegate: read all .py files and summarize what each one does`
-3. `Use a task to create a new module, then verify it from here`
+1. `サブタスクを使ってこのプロジェクトが使用しているテストフレームワークを調べる`
+2. `委託: すべての.pyファイルを読み、それぞれが何をするかをまとめる`
+3. `タスクを使って新しいモジュールを作成し、ここから確認する`

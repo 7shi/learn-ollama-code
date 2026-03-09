@@ -106,6 +106,6 @@ uv run agents/s08_background_tasks.py
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):
 
-1. `Run "sleep 5 && echo done" in the background, then create a file while it runs`
-2. `Start 3 background tasks: "sleep 2", "sleep 4", "sleep 6". Check their status.`
-3. `Run pytest in the background and keep working on other things`
+1. `在后台运行 "sleep 5 && echo done"，然后在运行期间创建文件`
+2. `启动 3 个后台任务："sleep 2"、"sleep 4"、"sleep 6"，检查其状态`
+3. `在后台运行 pytest 并继续做其他事情`

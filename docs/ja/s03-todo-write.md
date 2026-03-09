@@ -87,6 +87,6 @@ cd learn-ollama-code
 uv run agents/s03_todo_write.py
 ```
 
-1. `Refactor the file hello.py: add type hints, docstrings, and a main guard`
-2. `Create a Python package with __init__.py, utils.py, and tests/test_utils.py`
-3. `Review all Python files and fix any style issues`
+1. `hello.pyをリファクタリングする: 型ヒント、docstring、およびmainガードを追加する`
+2. `__init__.py、utils.py、tests/test_utils.pyを含むPythonパッケージを作成する`
+3. `すべてのPythonファイルをレビューし、スタイルの問題を修正する`

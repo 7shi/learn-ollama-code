@@ -122,8 +122,8 @@ uv run agents/s09_agent_teams.py
 
 试试这些 prompt (英文 prompt 对 LLM 效果更好, 也可以用中文):
 
-1. `Spawn alice (coder) and bob (tester). Have alice send bob a message.`
-2. `Broadcast "status update: phase 1 complete" to all teammates`
-3. `Check the lead inbox for any messages`
+1. `生成 alice（coder）和 bob（tester），让 alice 向 bob 发送消息`
+2. `向所有队友广播 "status update: phase 1 complete"`
+3. `检查领导收件箱是否有消息`
 4. 输入 `/team` 查看团队名册和状态
 5. 输入 `/inbox` 手动检查领导的收件箱

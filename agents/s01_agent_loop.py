@@ -79,9 +79,9 @@ def agent_loop(messages: list):
             return
         # Execute each tool call
         for tool in response.message.tool_calls:
-            print(f"\033[33m$ {tool.function.arguments['command']}\033[0m")
+            print(f"\033[33m{tool.function.name}{tool.function.arguments}\033[0m")
             output = bash(tool.function.arguments["command"])
-            print(output[:200])
+            print(f"\033[33m{str(output)[:200]}\033[0m")
             messages.append({"role": "tool", "content": output,
                              "tool_name": tool.function.name})
 

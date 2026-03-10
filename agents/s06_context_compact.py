@@ -234,6 +234,7 @@ def agent_loop(messages: list):
             return
         manual_compact = False
         for tool in response.message.tool_calls:
+            print(f"\033[33m{tool.function.name}{tool.function.arguments}\033[0m")
             if tool.function.name == "compact":
                 manual_compact = True
                 output = "Compressing..."
@@ -243,7 +244,7 @@ def agent_loop(messages: list):
                     output = handler(**tool.function.arguments) if handler else f"Unknown tool: {tool.function.name}"
                 except Exception as e:
                     output = f"Error: {e}"
-            print(f"> {tool.function.name}: {str(output)[:200]}")
+            print(f"\033[33m{str(output)[:200]}\033[0m")
             messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
         # Layer 3: manual compact triggered by the compact tool
         if manual_compact:

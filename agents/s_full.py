@@ -497,6 +497,7 @@ class TeammateManager:
                     break
                 idle_requested = False
                 for tool in response.message.tool_calls:
+                    print(f"\033[33m[{name}] {tool.function.name}{tool.function.arguments}\033[0m")
                     if tool.function.name == "idle":
                         idle_requested = True
                         output = "Entering idle phase."
@@ -508,7 +509,7 @@ class TeammateManager:
                         dispatch = {"bash": bash, "read_file": read_file,
                                     "write_file": write_file, "edit_file": edit_file}
                         output = dispatch.get(tool.function.name, lambda **kw: "Unknown")(**tool.function.arguments)
-                    print(f"  [{name}] {tool.function.name}: {str(output)[:120]}")
+                    print(f"\033[33m{str(output)[:120]}\033[0m")
                     messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
                 if idle_requested:
                     break
@@ -891,6 +892,7 @@ def agent_loop(messages: list):
         used_todo = False
         manual_compress = False
         for tool in response.message.tool_calls:
+            print(f"\033[33m{tool.function.name}{tool.function.arguments}\033[0m")
             if tool.function.name == "compress":
                 manual_compress = True
             handler = TOOL_HANDLERS.get(tool.function.name)
@@ -898,7 +900,7 @@ def agent_loop(messages: list):
                 output = handler(**tool.function.arguments) if handler else f"Unknown tool: {tool.function.name}"
             except Exception as e:
                 output = f"Error: {e}"
-            print(f"> {tool.function.name}: {str(output)[:200]}")
+            print(f"\033[33m{str(output)[:200]}\033[0m")
             messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
             if tool.function.name == "TodoWrite":
                 used_todo = True

@@ -193,14 +193,13 @@ def agent_loop(messages: list):
         if not response.message.tool_calls:
             return
         for tool in response.message.tool_calls:
+            print(f"\033[33m{tool.function.name}{tool.function.arguments}\033[0m")
             if tool.function.name == "task":
-                desc = tool.function.arguments.get("description", "subtask")
-                print(f"> task ({desc}): {tool.function.arguments['prompt'][:80]}")
                 output = run_subagent(tool.function.arguments["prompt"])
             else:
                 handler = TOOL_HANDLERS.get(tool.function.name)
                 output = handler(**tool.function.arguments) if handler else f"Unknown tool: {tool.function.name}"
-            print(f"  {str(output)[:200]}")
+            print(f"\033[33m{str(output)[:200]}\033[0m")
             messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
 
 

@@ -259,12 +259,13 @@ def agent_loop(messages: list):
         if not response.message.tool_calls:
             return
         for tool in response.message.tool_calls:
+            print(f"\033[33m{tool.function.name}{tool.function.arguments}\033[0m")
             handler = TOOL_HANDLERS.get(tool.function.name)
             try:
                 output = handler(**tool.function.arguments) if handler else f"Unknown tool: {tool.function.name}"
             except Exception as e:
                 output = f"Error: {e}"
-            print(f"> {tool.function.name}: {str(output)[:200]}")
+            print(f"\033[33m{str(output)[:200]}\033[0m")
             messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
 
 

@@ -9,4 +9,5 @@ dependencies = [
     "dotenv>=0.9.9",
     "ollama>=0.6.1",
     "gnureadline>=8.0.0; sys_platform == 'linux'",
+    "colorama>=0.4.6",
 ]

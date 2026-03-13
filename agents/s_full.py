@@ -49,8 +49,12 @@ except:
 from pathlib import Path
 from queue import Queue
 
+import colorama
+from colorama import Fore, Style
 from dotenv import load_dotenv
 from ollama import Client
+
+colorama.init()
 
 load_dotenv(override=True)
 
@@ -497,7 +501,7 @@ class TeammateManager:
                     break
                 idle_requested = False
                 for tool in response.message.tool_calls:
-                    print(f"\033[33m[{name}] {tool.function.name}{tool.function.arguments}\033[0m")
+                    print(f"{Fore.YELLOW}[{name}] {tool.function.name}{tool.function.arguments}{Style.RESET_ALL}")
                     if tool.function.name == "idle":
                         idle_requested = True
                         output = "Entering idle phase."
@@ -509,7 +513,7 @@ class TeammateManager:
                         dispatch = {"bash": bash, "read_file": read_file,
                                     "write_file": write_file, "edit_file": edit_file}
                         output = dispatch.get(tool.function.name, lambda **kw: "Unknown")(**tool.function.arguments)
-                    print(f"\033[33m{str(output)[:120]}\033[0m")
+                    print(f"{Fore.GREEN}{str(output)[:120]}{Style.RESET_ALL}")
                     messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
                 if idle_requested:
                     break
@@ -892,7 +896,7 @@ def agent_loop(messages: list):
         used_todo = False
         manual_compress = False
         for tool in response.message.tool_calls:
-            print(f"\033[33m{tool.function.name}{tool.function.arguments}\033[0m")
+            print(f"{Fore.YELLOW}{tool.function.name}{tool.function.arguments}{Style.RESET_ALL}")
             if tool.function.name == "compress":
                 manual_compress = True
             handler = TOOL_HANDLERS.get(tool.function.name)
@@ -900,7 +904,7 @@ def agent_loop(messages: list):
                 output = handler(**tool.function.arguments) if handler else f"Unknown tool: {tool.function.name}"
             except Exception as e:
                 output = f"Error: {e}"
-            print(f"\033[33m{str(output)[:200]}\033[0m")
+            print(f"{Fore.GREEN}{str(output)[:200]}{Style.RESET_ALL}")
             messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
             if tool.function.name == "TodoWrite":
                 used_todo = True
@@ -920,7 +924,7 @@ if __name__ == "__main__":
     history = [{"role": "system", "content": SYSTEM}]
     while True:
         try:
-            query = input("\033[36ms_full >> \033[0m")
+            query = input("s_full >> ")
         except (EOFError, KeyboardInterrupt):
             break
         if query.strip().lower() in ("q", "exit", ""):

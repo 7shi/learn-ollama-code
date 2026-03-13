@@ -26,8 +26,12 @@ except:
     import readline
 from pathlib import Path
 
+import colorama
+from colorama import Fore, Style
 from dotenv import load_dotenv
 from ollama import Client
+
+colorama.init()
 
 load_dotenv(override=True)
 
@@ -152,10 +156,10 @@ def agent_loop(messages: list):
         if not response.message.tool_calls:
             return
         for tool in response.message.tool_calls:
-            print(f"\033[33m{tool.function.name}{tool.function.arguments}\033[0m")
+            print(f"{Fore.YELLOW}{tool.function.name}{tool.function.arguments}{Style.RESET_ALL}")
             handler = TOOL_HANDLERS.get(tool.function.name)
             output = handler(**tool.function.arguments) if handler else f"Unknown tool: {tool.function.name}"
-            print(f"\033[33m{str(output)[:200]}\033[0m")
+            print(f"{Fore.GREEN}{str(output)[:200]}{Style.RESET_ALL}")
             messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
 
 
@@ -163,7 +167,7 @@ if __name__ == "__main__":
     history = [{"role": "system", "content": SYSTEM}]
     while True:
         try:
-            query = input("\033[36ms02 >> \033[0m")
+            query = input("s02 >> ")
         except (EOFError, KeyboardInterrupt):
             break
         if query.strip().lower() in ("q", "exit", ""):

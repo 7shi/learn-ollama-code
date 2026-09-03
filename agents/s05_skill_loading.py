@@ -140,6 +140,12 @@ def bash(command: str) -> str:
     if any(d in command for d in dangerous):
         return "Error: Dangerous command blocked"
     try:
+        confirm = input(f"Execute command? `{command}` [y/N]: ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        return "Error: Command execution canceled by user"
+    if confirm not in ("y", "yes"):
+        return "Error: Command execution canceled by user"
+    try:
         r = subprocess.run(command, shell=True, cwd=WORKDIR,
                            capture_output=True, text=True, timeout=120)
         out = (r.stdout + r.stderr).strip()
